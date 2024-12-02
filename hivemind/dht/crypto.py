@@ -4,15 +4,14 @@ from typing import Optional
 
 from hivemind.dht.validation import DHTRecord, RecordValidatorBase
 from hivemind.utils import MSGPackSerializer, get_logger
-from hivemind.utils.crypto import RSAPrivateKey, RSAPublicKey
+from hivemind.utils.crypto import Ed25519PrivateKey, Ed25519PublicKey
 
 logger = get_logger(__name__)
 
-
-class RSASignatureValidator(RecordValidatorBase):
+class Ed25519SignatureValidator(RecordValidatorBase):
     """
     Introduces a notion of *protected records* whose key/subkey contains substring
-    "[owner:ssh-rsa ...]" with an RSA public key of the owner.
+    "[owner:ssh-ed25519 ...]" with an Ed25519 public key of the owner.
 
     If this validator is used, changes to such records always must be signed with
     the corresponding private key (so only the owner can change them).
@@ -27,9 +26,9 @@ class RSASignatureValidator(RecordValidatorBase):
 
     _cached_private_key = None
 
-    def __init__(self, private_key: Optional[RSAPrivateKey] = None):
+    def __init__(self, private_key: Optional[Ed25519PrivateKey] = None):
         if private_key is None:
-            private_key = RSAPrivateKey.process_wide()
+            private_key = Ed25519PrivateKey.process_wide()
         self._private_key = private_key
 
         serialized_public_key = private_key.get_public_key().to_bytes()
@@ -49,7 +48,7 @@ class RSASignatureValidator(RecordValidatorBase):
         if len(set(public_keys)) > 1:
             logger.debug(f"Key and subkey can't contain different public keys in {record}")
             return False
-        public_key = RSAPublicKey.from_bytes(public_keys[0])
+        public_key = Ed25519PublicKey.from_bytes(public_keys[0])
 
         signatures = self._SIGNATURE_RE.findall(record.value)
         if len(signatures) != 1:
@@ -83,9 +82,9 @@ class RSASignatureValidator(RecordValidatorBase):
         return 10
 
     def merge_with(self, other: RecordValidatorBase) -> bool:
-        if not isinstance(other, RSASignatureValidator):
+        if not isinstance(other, Ed25519SignatureValidator):
             return False
 
-        # Ignore another RSASignatureValidator instance (it doesn't make sense to have several
+        # Ignore another Ed25519SignatureValidator instance (it doesn't make sense to have several
         # instances of this class) and report successful merge
         return True

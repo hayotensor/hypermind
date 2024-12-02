@@ -3,7 +3,7 @@ from typing import Any, Dict, Optional, Type
 
 import pydantic.v1 as pydantic
 
-from hivemind.dht.crypto import RSASignatureValidator
+from hivemind.dht.crypto import Ed25519SignatureValidator
 from hivemind.dht.protocol import DHTProtocol
 from hivemind.dht.routing import DHTID
 from hivemind.dht.validation import DHTRecord, RecordValidatorBase
@@ -91,6 +91,7 @@ class SchemaValidator(RecordValidatorBase):
             return False
         [field_name] = list(record.keys())
 
+        n_outside_schema = 0
         validation_errors = []
         for schema in self._schemas:
             try:
@@ -176,4 +177,4 @@ def conbytes(*, regex: bytes = None, **kwargs) -> Type[pydantic.BaseModel]:
     return ConstrainedBytesWithRegex
 
 
-BytesWithPublicKey = conbytes(regex=b".*" + RSASignatureValidator.PUBLIC_KEY_REGEX + b".*")
+BytesWithPublicKey = conbytes(regex=b".*" + Ed25519SignatureValidator.PUBLIC_KEY_REGEX + b".*")

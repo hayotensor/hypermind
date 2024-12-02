@@ -10,7 +10,8 @@ from hivemind.dht.storage import DHTLocalStorage, DictionaryDHTValue
 from hivemind.p2p import P2P, P2PContext, PeerID, ServicerBase
 from hivemind.proto import dht_pb2
 from hivemind.utils import MSGPackSerializer, get_logger
-from hivemind.utils.auth import AuthorizerBase, AuthRole, AuthRPCWrapper
+# from hivemind.utils.auth import AuthorizerBase, AuthRole, AuthRPCWrapper
+from hivemind.utils.auth_ed25519 import AuthorizerBase, AuthRole, AuthRPCWrapper
 from hivemind.utils.timed_storage import (
     MAX_DHT_TIME_DISCREPANCY_SECONDS,
     DHTExpiration,

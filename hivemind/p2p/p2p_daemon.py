@@ -22,7 +22,7 @@ from hivemind.p2p.p2p_daemon_bindings.utils import ControlFailure
 from hivemind.proto import crypto_pb2
 from hivemind.proto.p2pd_pb2 import RPCError
 from hivemind.utils.asyncio import as_aiter, asingle
-from hivemind.utils.crypto import RSAPrivateKey
+from hivemind.utils.crypto import Ed25519PrivateKey
 from hivemind.utils.logging import get_logger, golog_level_to_python, loglevel, python_level_to_golog
 
 logger = get_logger(__name__)
@@ -277,8 +277,8 @@ class P2P:
 
     @staticmethod
     def generate_identity(identity_path: str) -> None:
-        private_key = RSAPrivateKey()
-        protobuf = crypto_pb2.PrivateKey(key_type=crypto_pb2.KeyType.RSA, data=private_key.to_bytes())
+        private_key = Ed25519PrivateKey()
+        protobuf = crypto_pb2.PrivateKey(key_type=crypto_pb2.KeyType.Ed25519, data=private_key.to_bytes())
 
         try:
             with open(identity_path, "wb") as f:
@@ -288,6 +288,20 @@ class P2P:
                 f"The directory `{os.path.dirname(identity_path)}` for saving the identity does not exist"
             )
         os.chmod(identity_path, 0o400)
+
+    # @staticmethod
+    # def generate_identity(identity_path: str) -> None:
+    #     private_key = RSAPrivateKey()
+    #     protobuf = crypto_pb2.PrivateKey(key_type=crypto_pb2.KeyType.RSA, data=private_key.to_bytes())
+
+    #     try:
+    #         with open(identity_path, "wb") as f:
+    #             f.write(protobuf.SerializeToString())
+    #     except FileNotFoundError:
+    #         raise FileNotFoundError(
+    #             f"The directory `{os.path.dirname(identity_path)}` for saving the identity does not exist"
+    #         )
+    #     os.chmod(identity_path, 0o400)
 
     @classmethod
     async def replicate(cls, daemon_listen_maddr: Multiaddr) -> "P2P":
