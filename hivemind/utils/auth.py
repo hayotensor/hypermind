@@ -7,7 +7,7 @@ from enum import Enum
 from typing import Optional
 
 from hivemind.proto.auth_pb2 import AccessToken, RequestAuthInfo, ResponseAuthInfo
-from hivemind.utils.crypto import RSAPrivateKey, RSAPublicKey
+from hivemind.utils.crypto import Ed25519PrivateKey, Ed25519PublicKey
 from hivemind.utils.logging import get_logger
 from hivemind.utils.timed_storage import TimedStorage, get_dht_time
 
@@ -32,7 +32,7 @@ class AuthorizedResponseBase:
 
 class AuthorizerBase(ABC):
     @abstractmethod
-    async def sign_request(self, request: AuthorizedRequestBase, service_public_key: Optional[RSAPublicKey]) -> None:
+    async def sign_request(self, request: AuthorizedRequestBase, service_public_key: Optional[Ed25519PublicKey]) -> None:
         ...
 
     @abstractmethod
@@ -54,9 +54,9 @@ class TokenAuthorizerBase(AuthorizerBase):
     See https://github.com/learning-at-home/hivemind/issues/253
     """
 
-    def __init__(self, local_private_key: Optional[RSAPrivateKey] = None):
+    def __init__(self, local_private_key: Optional[Ed25519PrivateKey] = None):
         if local_private_key is None:
-            local_private_key = RSAPrivateKey.process_wide()
+            local_private_key = Ed25519PrivateKey.process_wide()
         self._local_private_key = local_private_key
         self._local_public_key = local_private_key.get_public_key()
 
@@ -85,10 +85,10 @@ class TokenAuthorizerBase(AuthorizerBase):
                     assert self.is_token_valid(self._local_access_token)
 
     @property
-    def local_public_key(self) -> RSAPublicKey:
+    def local_public_key(self) -> Ed25519PublicKey:
         return self._local_public_key
 
-    async def sign_request(self, request: AuthorizedRequestBase, service_public_key: Optional[RSAPublicKey]) -> None:
+    async def sign_request(self, request: AuthorizedRequestBase, service_public_key: Optional[Ed25519PublicKey]) -> None:
         await self.refresh_token_if_needed()
         auth = request.auth
 
@@ -112,7 +112,7 @@ class TokenAuthorizerBase(AuthorizerBase):
             logger.debug("Client failed to prove that it (still) has access to the network")
             return False
 
-        client_public_key = RSAPublicKey.from_bytes(auth.client_access_token.public_key)
+        client_public_key = Ed25519PublicKey.from_bytes(auth.client_access_token.public_key)
         signature = auth.signature
         auth.signature = b""
         if not client_public_key.verify(request.SerializeToString(), signature):
@@ -155,7 +155,7 @@ class TokenAuthorizerBase(AuthorizerBase):
             logger.debug("Service failed to prove that it (still) has access to the network")
             return False
 
-        service_public_key = RSAPublicKey.from_bytes(auth.service_access_token.public_key)
+        service_public_key = Ed25519PublicKey.from_bytes(auth.service_access_token.public_key)
         signature = auth.signature
         auth.signature = b""
         if not service_public_key.verify(response.SerializeToString(), signature):
@@ -180,7 +180,7 @@ class AuthRPCWrapper:
         stub,
         role: AuthRole,
         authorizer: Optional[AuthorizerBase],
-        service_public_key: Optional[RSAPublicKey] = None,
+        service_public_key: Optional[Ed25519PublicKey] = None,
     ):
         self._stub = stub
         self._role = role

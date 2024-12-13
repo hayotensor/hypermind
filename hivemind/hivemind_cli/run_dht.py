@@ -25,6 +25,8 @@ async def report_status(dht: DHT, node: DHTNode):
 
 
 def main():
+    print("hivemind_cli run_dht")
+
     parser = ArgumentParser()
     parser.add_argument(
         "--initial_peers",

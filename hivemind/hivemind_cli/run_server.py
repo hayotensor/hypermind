@@ -17,6 +17,7 @@ logger = get_logger(__name__)
 
 
 def main():
+    print("hivemind_cli run_server")
     # fmt:off
     parser = configargparse.ArgParser(default_config_files=["config.yml"])
     parser.add('-c', '--config', required=False, is_config_file=True, help='config file path')
@@ -104,6 +105,7 @@ def main():
     compression_type = args.pop("compression")
     compression = getattr(CompressionType, compression_type)
 
+    print("hivemind_cli run_server server")
     server = Server.create(**args, optim_cls=optim_cls, start=True, compression=compression)
 
     exit_event = Event()

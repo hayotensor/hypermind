@@ -144,6 +144,7 @@ class P2P:
                                        appearing in case of the identity collision.
         :return: a wrapper for the p2p daemon
         """
+        print("P2P.create create")
 
         assert not (
             initial_peers and use_ipfs
@@ -183,6 +184,8 @@ class P2P:
                 process_kwargs[param] = self._maddrs_to_str(value)
         if no_listen:
             process_kwargs["noListenAddrs"] = 1
+
+        print("P2P.create identity_path is not None")
         if identity_path is not None:
             if os.path.isfile(identity_path):
                 if check_if_identity_free and need_bootstrap:
@@ -198,9 +201,13 @@ class P2P:
                         raise P2PDaemonError(f"Identity from `{identity_path}` is already taken by another peer")
             else:
                 logger.info(f"Generating new identity to be saved in `{identity_path}`")
-                self.generate_identity(identity_path)
+                print("P2P.create generate_identity")
+                # self.generate_identity(identity_path)
+                self.generate_identity_ed25519(identity_path)
                 # A newly generated identity is not taken with ~100% probability
             process_kwargs["id"] = identity_path
+
+        print("P2P.create _make_process_args")
 
         proc_args = self._make_process_args(
             str(p2pd_path),
@@ -218,9 +225,13 @@ class P2P:
             **process_kwargs,
         )
 
+        print("P2P.create _make_process_args after", proc_args)
+
         env = os.environ.copy()
         env.setdefault("GOLOG_LOG_LEVEL", python_level_to_golog(loglevel))
         env["GOLOG_LOG_FMT"] = "json"
+
+        print("P2P.create Launching")
 
         logger.debug(f"Launching {proc_args}")
         self._child = await asyncio.subprocess.create_subprocess_exec(
@@ -228,19 +239,26 @@ class P2P:
         )
         self._alive = True
 
+        print("P2P.create self._alive")
+
         ready = asyncio.Future()
         self._reader_task = asyncio.create_task(self._read_outputs(ready))
+        print("P2P.create self._reader_task")
         try:
             await asyncio.wait_for(ready, startup_timeout)
         except asyncio.TimeoutError:
             await self.shutdown()
             raise P2PDaemonError(f"Daemon failed to start in {startup_timeout:.1f} seconds")
 
+        print("P2P.create p2pclient.Client.create")
+
         self._client = await p2pclient.Client.create(
             control_maddr=self._daemon_listen_maddr,
             listen_maddr=self._client_listen_maddr,
             persistent_conn_max_msg_size=persistent_conn_max_msg_size,
         )
+
+        print("P2P.create _ping_daemon")
 
         await self._ping_daemon()
         return self
@@ -256,9 +274,13 @@ class P2P:
         use_ipfs: bool,
         use_relay: bool,
     ) -> bool:
+        print("P2P.create is_identity_taken")
         with open(identity_path, "rb") as f:
-            peer_id = PeerID.from_identity(f.read())
+            print("P2P.create identity_path")
+            peer_id = PeerID.from_identity_ed25519(f.read())
+            # peer_id = PeerID.from_identity(f.read())
 
+        print("is_identity_taken peer_id", peer_id)
         anonymous_p2p = await cls.create(
             initial_peers=initial_peers,
             dht_mode="client",
@@ -277,6 +299,7 @@ class P2P:
 
     @staticmethod
     def generate_identity(identity_path: str) -> None:
+        print("generate_identity")
         private_key = Ed25519PrivateKey()
         protobuf = crypto_pb2.PrivateKey(key_type=crypto_pb2.KeyType.Ed25519, data=private_key.to_bytes())
 
@@ -289,19 +312,22 @@ class P2P:
             )
         os.chmod(identity_path, 0o400)
 
-    # @staticmethod
-    # def generate_identity(identity_path: str) -> None:
-    #     private_key = RSAPrivateKey()
-    #     protobuf = crypto_pb2.PrivateKey(key_type=crypto_pb2.KeyType.RSA, data=private_key.to_bytes())
+    @staticmethod
+    def generate_identity_ed25519(identity_path: str) -> None:
+        private_key = Ed25519PrivateKey()
+        private_key_bytes = private_key.to_bytes()
+        public_key_bytes = private_key.get_public_key().to_raw_bytes()
+        combined_key_bytes = private_key_bytes + public_key_bytes
+        protobuf = crypto_pb2.PrivateKey(key_type=crypto_pb2.KeyType.Ed25519, data=combined_key_bytes)
 
-    #     try:
-    #         with open(identity_path, "wb") as f:
-    #             f.write(protobuf.SerializeToString())
-    #     except FileNotFoundError:
-    #         raise FileNotFoundError(
-    #             f"The directory `{os.path.dirname(identity_path)}` for saving the identity does not exist"
-    #         )
-    #     os.chmod(identity_path, 0o400)
+        try:
+            with open(identity_path, "wb") as f:
+                f.write(protobuf.SerializeToString())
+        except FileNotFoundError:
+            raise FileNotFoundError(
+                f"The directory `{os.path.dirname(identity_path)}` for saving the identity does not exist"
+            )
+        os.chmod(identity_path, 0o400)
 
     @classmethod
     async def replicate(cls, daemon_listen_maddr: Multiaddr) -> "P2P":

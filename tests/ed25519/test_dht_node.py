@@ -18,6 +18,7 @@ logger = get_logger(__name__)
 # note: we run network-related tests in a separate process to re-initialize all global states from scratch
 # this helps us avoid undesirable gRPC side-effects (e.g. segfaults) when running multiple tests in sequence
 
+# pytest tests/ed25519/test_dht_node.py -rP
 
 @pytest.mark.forked
 @pytest.mark.asyncio

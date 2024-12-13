@@ -11,6 +11,7 @@ from hivemind.dht.validation import DHTRecord
 from hivemind.utils.crypto import Ed25519PrivateKey
 from hivemind.utils.timed_storage import get_dht_time
 
+# pytest tests/ed25519/test_dht_crypto.py -rP
 
 def test_ed25519_signature_validator():
     receiver_validator = Ed25519SignatureValidator()
@@ -115,6 +116,9 @@ async def test_dhtnode_signatures():
     mallory = await DHTNode.create(
         record_validator=Ed25519SignatureValidator(Ed25519PrivateKey()), initial_peers=initial_peers
     )
+
+    print("alice local_public_key", alice.protocol.record_validator.local_public_key)
+    print("bob local_public_key  ", bob.protocol.record_validator.local_public_key)
 
     key = b"key"
     subkey = b"protected_subkey" + bob.protocol.record_validator.local_public_key

@@ -61,11 +61,13 @@ class PeerID:
 
     @classmethod
     def from_base58(cls, base58_id: str) -> "PeerID":
+        print("PeerID b58decode")
         peer_id_bytes = base58.b58decode(base58_id)
         return cls(peer_id_bytes)
 
     @classmethod
     def from_identity(cls, data: bytes) -> "PeerID":
+        print("from_identity")
         """
         See [1] for the specification of how this conversion should happen.
 
@@ -78,6 +80,7 @@ class PeerID:
             encoding=serialization.Encoding.DER,
             format=serialization.PublicFormat.SubjectPublicKeyInfo,
         )
+        
         encoded_public_key = crypto_pb2.PublicKey(
             key_type=crypto_pb2.Ed25519,
             data=encoded_public_key,
@@ -89,6 +92,52 @@ class PeerID:
         )
         return cls(encoded_digest)
 
+    def from_identity_ed25519(cls, data: bytes) -> "PeerID":
+        """
+        See [1] for the specification of how this conversion should happen.
+
+        [1] https://github.com/libp2p/specs/blob/master/peer-ids/peer-ids.md#peer-ids
+        """
+        print("from_identity_ed25519")
+        key_data = crypto_pb2.PrivateKey.FromString(data).data
+
+        private_key = serialization.load_pem_private_key(key_data, password=None)
+
+        # encoded_public_key = private_key.public_key().public_bytes(
+        #     encoding=serialization.Encoding.PEM,
+        #     format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        # )
+
+        # encoded_public_key = crypto_pb2.PublicKey(
+        #     key_type=crypto_pb2.Ed25519,
+        #     data=encoded_public_key,
+        # ).SerializeToString()
+
+        # encoded_digest = multihash.encode(
+        #     hashlib.sha256(encoded_public_key).digest(),
+        #     multihash.coerce_code("sha2-256"),
+        # )
+
+        # test
+        private_key_bytes = private_key.private_bytes(
+            encoding=serialization.Encoding.Raw,  # No encoding for raw bytes
+            format=serialization.PrivateFormat.Raw,    # No specific format for raw bytes
+            encryption_algorithm=serialization.NoEncryption()
+        )
+
+        public_key_bytes = private_key.public_key().public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw,
+        )
+
+        combined_key_bytes = private_key_bytes + public_key_bytes
+
+        encoded_digest = multihash.encode(
+            hashlib.sha256(combined_key_bytes).digest(),
+            multihash.coerce_code("sha2-256"),
+        )
+
+        return cls(encoded_digest)
 
 def sha256_digest(data: Union[str, bytes]) -> bytes:
     if isinstance(data, str):
