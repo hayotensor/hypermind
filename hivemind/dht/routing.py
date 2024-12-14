@@ -267,13 +267,8 @@ class DHTID(int):
             by default, generates a random dhtid from :nbits: random bits
         """
         source = random.getrandbits(nbits).to_bytes(nbits, byteorder="big") if source is None else source
-        print("DHTID source 1: ", source)
         source = MSGPackSerializer.dumps(source) if not isinstance(source, bytes) else source
-        print("DHTID source 2: ", source)
         raw_uid = cls.HASH_FUNC(source).digest()
-        print("DHTID raw_uid: ", raw_uid)
-        print("DHTID raw_uid.hex(): ", int(raw_uid.hex(), 16))
-        print("DHTID raw_uid.hex(): ", raw_uid.hex())
         return cls(int(raw_uid.hex(), 16))
 
     def xor_distance(self, other: Union[DHTID, Sequence[DHTID]]) -> Union[int, List[int]]:

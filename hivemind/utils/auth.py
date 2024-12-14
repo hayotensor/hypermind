@@ -110,9 +110,6 @@ class TokenAuthorizerBase(AuthorizerBase):
         await self.refresh_token_if_needed()
         auth = request.auth
 
-        print("TokenAuthorizerBase validate_request auth.service_public_key: ", auth.service_public_key)
-        print("TokenAuthorizerBase validate_request self._local_public_key.to_bytes(): ", self._local_public_key.to_bytes())
-
         if not self.is_token_valid(auth.client_access_token):
             logger.debug("Client failed to prove that it (still) has access to the network")
             return False

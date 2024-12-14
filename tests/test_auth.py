@@ -181,8 +181,6 @@ class MockAuthorizer2(AuthorizerBase):
 
         self._local_private_key = local_private_key
         self._local_public_key = local_private_key.get_public_key()
-        print("MockAuthorizer2 self._local_public_key", self._local_public_key.to_bytes())
-        print("MockAuthorizer2 self._local_public_key", self._local_public_key.to_bytes())
 
     async def get_token(self) -> AccessToken:
         token = AccessToken(
@@ -284,6 +282,7 @@ async def test_valid_request_and_response_2():
     test_rsa2 = RSAPrivateKey()
     client_authorizer = MockAuthorizer2(RSAPrivateKey())
     service_authorizer = MockAuthorizer2(RSAPrivateKey())
+    fake_authorizer = MockAuthorizer2(RSAPrivateKey())
 
     request = dht_pb2.PingRequest()
     client_node_id = DHTID.generate()
@@ -292,6 +291,7 @@ async def test_valid_request_and_response_2():
     request.peer.node_id = client_node_id.to_bytes()
     # request.auth.service_public_key = client_authorizer.local_public_key.to_bytes()
     request.auth.client_access_token.public_key = client_authorizer.local_public_key.to_bytes()
+    print("test_valid_request_and_response_2 request", request)
     await client_authorizer.sign_request(request, service_authorizer.local_public_key)
     assert await service_authorizer.validate_request(request)
 
@@ -312,10 +312,6 @@ async def test_valid_request_and_response_2():
 
 @pytest.mark.asyncio
 async def test_valid_request_and_response_invalid():
-    # private_key = rsa.generate_private_key(
-    #     public_exponent=65537,
-    #     key_size=2048,
-    # )
     private_key = b"""-----BEGIN PRIVATE KEY-----
 MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDa3Ik+R/Wl/xLJ
 6XJv1hod6MzW+dcUfEEe6sUyCB3PGWKqSiSaUeiouHIfZrcjeOG81HAG4yZ9Nvs+
@@ -399,12 +395,30 @@ v/Ow5T0q5gIJAiEAyS4RaI9YG8EWx/2w0T67ZUVAw8eOMB6BIUg0Xcu+3okCIBOs
         rsa_private_key = RSAPrivateKey(private_key=private_key)
         service_authorizer = MockAuthorizer2(rsa_private_key)
 
-    fake_service_authorizer = MockAuthorizer2(RSAPrivateKey().process_wide())
+    fake_service_authorizer = MockAuthorizer2(RSAPrivateKey())
 
+    # invalid validate request
     request = dht_pb2.PingRequest()
     client_node_id = DHTID.generate()
     request.peer.node_id = client_node_id.to_bytes()
     request.auth.client_access_token.public_key = client_authorizer.local_public_key.to_bytes()
+    # wrong public key
+    await client_authorizer.sign_request(request, fake_service_authorizer.local_public_key)
+    print("test_valid_request_and_response_invalid request", request)
+    assert not await service_authorizer.validate_request(request)
+
+    response = dht_pb2.PingResponse()
+    service_node_id = DHTID.generate()
+    response.peer.node_id = service_node_id.to_bytes()
+    await service_authorizer.sign_response(response, request)
+    assert await client_authorizer.validate_response(response, request)
+
+    # bad validate response
+    request = dht_pb2.PingRequest()
+    client_node_id = DHTID.generate()
+    request.peer.node_id = client_node_id.to_bytes()
+    request.auth.client_access_token.public_key = client_authorizer.local_public_key.to_bytes()
+    # wrong public key
     await client_authorizer.sign_request(request, service_authorizer.local_public_key)
     print("test_valid_request_and_response_invalid request", request)
     assert await service_authorizer.validate_request(request)
@@ -416,8 +430,8 @@ v/Ow5T0q5gIJAiEAyS4RaI9YG8EWx/2w0T67ZUVAw8eOMB6BIUg0Xcu+3okCIBOs
     assert await client_authorizer.validate_response(response, request)
 
 
-    # client_authorizer = MockAuthorizer2(RSAPrivateKey().process_wide())
-    # service_authorizer = MockAuthorizer2(RSAPrivateKey().process_wide())
+    # client_authorizer = MockAuthorizer2(RSAPrivateKey())
+    # service_authorizer = MockAuthorizer2(RSAPrivateKey())
 
     # request = dht_pb2.PingRequest()
     # request.peer.node_id = b"true-ping"
@@ -471,3 +485,48 @@ async def test_authorizer():
         mock_auth = MockAuthorizer2(rsa_private_key)
 
 
+# pytest tests/test_auth.py::test_rsa -rP
+
+@pytest.mark.asyncio
+async def test_rsa():
+    private_key_1 = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=2048,
+    )
+
+    private_key_1 = private_key_1.private_bytes(
+        encoding=serialization.Encoding.DER,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption()
+    )
+
+    print("private_key_1", private_key_1)
+
+    private_key_2 = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=2048,
+    )
+
+    private_key_2 = private_key_2.private_bytes(
+        encoding=serialization.Encoding.DER,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption()
+    )
+
+    print("private_key_2", private_key_2)
+
+# pytest tests/test_auth.py::test_rsa_private_key -rP
+
+@pytest.mark.asyncio
+async def test_rsa_private_key():
+    private_key_1 = RSAPrivateKey()
+
+    private_key_1 = private_key_1.to_bytes()
+
+    print("private_key_1", private_key_1)
+
+    private_key_2 = RSAPrivateKey()
+
+    private_key_2 = private_key_2.to_bytes()
+
+    print("private_key_2", private_key_2)

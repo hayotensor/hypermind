@@ -82,12 +82,6 @@ async def write_pbmsg(stream: asyncio.StreamWriter, pbmsg: PBMessage) -> None:
 
 
 async def read_pbmsg_safe(stream: asyncio.StreamReader, pbmsg: PBMessage) -> None:
-    print("read_pbmsg_safe")
-    print("read_pbmsg_safe pbmsg", pbmsg)
-    print("read_pbmsg_safe stream", stream)
     len_msg_bytes = await read_unsigned_varint(stream)
-    print("read_pbmsg_safe len_msg_bytes", len_msg_bytes)
     msg_bytes = await stream.readexactly(len_msg_bytes)
-    print("read_pbmsg_safe msg_bytes", msg_bytes)
-    print("read_pbmsg_safe pbmsg.ParseFromString(msg_bytes)", pbmsg.ParseFromString(msg_bytes))
     pbmsg.ParseFromString(msg_bytes)
