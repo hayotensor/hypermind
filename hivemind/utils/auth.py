@@ -302,11 +302,8 @@ class AuthRPCWrapper:
         async def wrapped_rpc(request: AuthorizedRequestBase, *args, **kwargs):
             if self._authorizer is not None:
                 if self._role == AuthRole.CLIENT:
-                    print("AuthRPCWrapper signing request as CLIENT", request)
-                    print("AuthRPCWrapper signing request as CLIENT self._service_public_key", self._service_public_key)
                     await self._authorizer.sign_request(request, self._service_public_key)
                 elif self._role == AuthRole.SERVICER:
-                    print("AuthRPCWrapper validating request as SERVICER", request)
                     if not await self._authorizer.validate_request(request):
                         return None
 
@@ -314,12 +311,8 @@ class AuthRPCWrapper:
 
             if self._authorizer is not None:
                 if self._role == AuthRole.SERVICER:
-                    print("AuthRPCWrapper signing response as SERVICER response", response)
-                    print("AuthRPCWrapper signing response as SERVICER request", request)
                     await self._authorizer.sign_response(response, request)
                 elif self._role == AuthRole.CLIENT:
-                    print("AuthRPCWrapper validating response as CLIENT response", response)
-                    print("AuthRPCWrapper validating response as CLIENT request", request)
                     if not await self._authorizer.validate_response(response, request):
                         return None
 
