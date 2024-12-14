@@ -327,6 +327,10 @@ class ControlClient:
         peer_id_bytes = resp.identify.id
         maddrs_bytes = resp.identify.addrs
 
+        print("ControlClient identify resp", resp)
+        print("ControlClient identify peer_id_bytes", peer_id_bytes)
+        print("ControlClient identify maddrs_bytes", maddrs_bytes)
+
         maddrs = tuple(Multiaddr(maddr_bytes) for maddr_bytes in maddrs_bytes)
         peer_id = PeerID(peer_id_bytes)
 

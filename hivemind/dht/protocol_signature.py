@@ -11,7 +11,6 @@ from hivemind.p2p import P2P, P2PContext, PeerID, ServicerBase
 from hivemind.proto import dht_pb2
 from hivemind.utils import MSGPackSerializer, get_logger
 from hivemind.utils.auth import AuthorizerBase, AuthRole, AuthRPCWrapper
-from hivemind.utils.crypto import RSAPublicKey
 from hivemind.utils.timed_storage import (
     MAX_DHT_TIME_DISCREPANCY_SECONDS,
     DHTExpiration,
@@ -93,13 +92,6 @@ class DHTProtocol(ServicerBase):
         """get a stub that sends requests to a given peer"""
         stub = super().get_stub(self.p2p, peer)
         return AuthRPCWrapper(stub, AuthRole.CLIENT, self.authorizer, service_public_key=None)
-        # return AuthRPCWrapper(stub, AuthRole.CLIENT, self.authorizer, service_public_key=self.authorizer.get_public_key())
-        # return AuthRPCWrapper(stub, AuthRole.CLIENT, self.authorizer, service_public_key=self.authorizer.local_public_key)
-
-    def get_stub_with_pubkey(self, peer: PeerID, service_public_key: RSAPublicKey) -> AuthRPCWrapper:
-        """get a stub that sends requests to a given peer"""
-        stub = super().get_stub(self.p2p, peer)
-        return AuthRPCWrapper(stub, AuthRole.CLIENT, self.authorizer, service_public_key=service_public_key)
 
     async def call_ping(self, peer: PeerID, validate: bool = False, strict: bool = True) -> Optional[DHTID]:
         """
@@ -116,59 +108,6 @@ class DHTProtocol(ServicerBase):
                 ping_request = dht_pb2.PingRequest(peer=self.node_info, validate=validate)
                 time_requested = get_dht_time()
                 response = await self.get_stub(peer).rpc_ping(ping_request, timeout=self.wait_timeout)
-                time_responded = get_dht_time()
-        except Exception as e:
-            logger.debug(f"DHTProtocol failed to ping {peer}", exc_info=True)
-            response = None
-        responded = bool(response and response.peer and response.peer.node_id)
-
-        if responded and validate:
-            try:
-                if not self.client_mode and not response.available:
-                    raise ValidationError(
-                        f"Peer {peer} can't access this node. " f"Probably, libp2p has failed to bypass the firewall"
-                    )
-
-                if response.dht_time != dht_pb2.PingResponse.DESCRIPTOR.fields_by_name["dht_time"].default_value:
-                    if (
-                        response.dht_time < time_requested - MAX_DHT_TIME_DISCREPANCY_SECONDS
-                        or response.dht_time > time_responded + MAX_DHT_TIME_DISCREPANCY_SECONDS
-                    ):
-                        raise ValidationError(
-                            f"local time must be within {MAX_DHT_TIME_DISCREPANCY_SECONDS} seconds "
-                            f" of others(local: {time_requested:.5f}, peer: {response.dht_time:.5f})"
-                        )
-            except ValidationError as e:
-                if strict:
-                    raise
-                else:
-                    logger.warning(repr(e))
-
-        peer_id = DHTID.from_bytes(response.peer.node_id) if responded else None
-        asyncio.create_task(self.update_routing_table(peer_id, peer, responded=responded))
-        return peer_id
-
-    async def call_ping_with_pubkey(
-        self, 
-        peer: PeerID, 
-        service_public_key: RSAPublicKey, 
-        validate: bool = False, 
-        strict: bool = True
-    ) -> Optional[DHTID]:
-        """
-        Get peer's node id and add him to the routing table. If peer doesn't respond, return None
-        :param peer: peer ID to ping
-        :param validate: if True, validates that node's peer_id is available
-        :param strict: if strict=True, validation will raise exception on fail, otherwise it will only warn
-        :note: if DHTProtocol was created with client_mode=False, also request peer to add you to his routing table
-
-        :return: node's DHTID, if peer responded and decided to send his node_id
-        """
-        try:
-            async with self.rpc_semaphore:
-                ping_request = dht_pb2.PingRequest(peer=self.node_info, validate=validate)
-                time_requested = get_dht_time()
-                response = await self.get_stub_with_pubkey(peer, service_public_key).rpc_ping(ping_request, timeout=self.wait_timeout)
                 time_responded = get_dht_time()
         except Exception as e:
             logger.debug(f"DHTProtocol failed to ping {peer}", exc_info=True)
@@ -429,9 +368,6 @@ class DHTProtocol(ServicerBase):
         return response
 
     async def update_routing_table(self, node_id: Optional[DHTID], peer_id: PeerID, responded=True):
-        print("update_routing_table node_id", node_id)
-        print("update_routing_table peer_id", peer_id)
-        print("update_routing_table responded", responded)
         """
         This method is called on every incoming AND outgoing request to update the routing table
 

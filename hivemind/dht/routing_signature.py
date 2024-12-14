@@ -12,6 +12,8 @@ from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, Union
 from hivemind.p2p import PeerID
 from hivemind.utils import MSGPackSerializer, get_dht_time
 
+from substrateinterface import Keypair, KeypairType
+
 DHTKey = Subkey = DHTValue = Any
 BinaryDHTValue = bytes
 
@@ -32,6 +34,9 @@ class RoutingTable:
         self.buckets = [KBucket(node_id.MIN, node_id.MAX, bucket_size)]
         self.peer_id_to_uid: Dict[PeerID, DHTID] = dict()  # all nodes currently in buckets, including replacements
         self.uid_to_peer_id: Dict[DHTID, PeerID] = dict()  # all nodes currently in buckets, including replacements
+        self.account_id_to_uid: Dict[str, DHTID] = dict()  # all nodes currently in buckets, including replacements
+        self.uid_to_account_id: Dict[DHTID, str] = dict()  # all nodes currently in buckets, including replacements
+        self.peer_id_to_account_id: Dict[DHTID, str] = dict()  # all nodes currently in buckets, including replacements
 
     def get_bucket_index(self, node_id: DHTID) -> int:
         """Get the index of the bucket that the given node would fall into."""
@@ -45,7 +50,13 @@ class RoutingTable:
         assert upper_index - lower_index == 1
         return lower_index
 
-    def add_or_update_node(self, node_id: DHTID, peer_id: PeerID) -> Optional[Tuple[DHTID, PeerID]]:
+    def add_or_update_node(
+        self, 
+        node_id: DHTID, 
+        peer_id: PeerID, 
+        account_id: str,
+        signature: str
+    ) -> Optional[Tuple[DHTID, PeerID]]:
         """
         Update routing table after an incoming request from :peer_id: or outgoing request to :peer_id:
 
@@ -54,6 +65,9 @@ class RoutingTable:
           If this method returned a node to be ping-ed, the protocol will ping it to check and either move it to
           the start of the table or remove that node and replace it with
         """
+        keypair_public = Keypair(ss58_address=account_id, crypto_type=KeypairType.SR25519)
+        assert keypair_public.verify(peer_id, signature), "Signed peer_id verification failed"
+
         bucket_index = self.get_bucket_index(node_id)
         bucket = self.buckets[bucket_index]
         store_success = bucket.add_or_update_node(node_id, peer_id)
@@ -62,13 +76,21 @@ class RoutingTable:
             # if we added node to bucket or as a replacement, throw it into lookup dicts as well
             self.uid_to_peer_id[node_id] = peer_id
             self.peer_id_to_uid[peer_id] = node_id
+            self.account_id_to_uid[account_id] = node_id
+            self.uid_to_account_id[node_id] = account_id
+            self.peer_id_to_account_id[peer_id] = account_id
 
         if not store_success:
             # Per section 4.2 of paper, split if the bucket has node's own id in its range
             # or if bucket depth is not congruent to 0 mod $b$
             if bucket.has_in_range(self.node_id) or bucket.depth % self.depth_modulo != 0:
                 self.split_bucket(bucket_index)
-                return self.add_or_update_node(node_id, peer_id)
+                return self.add_or_update_node(
+                    node_id, 
+                    peer_id,
+                    account_id,
+                    signature
+                )
 
             # The bucket is full and won't split further. Return a node to ping (see this method's docstring)
             return bucket.request_ping_node()
@@ -104,6 +126,12 @@ class RoutingTable:
         node_peer_id = self.uid_to_peer_id.pop(node_id)
         if self.peer_id_to_uid.get(node_peer_id) == node_id:
             del self.peer_id_to_uid[node_peer_id]
+        node_account_id = self.uid_to_account_id.pop(node_id)
+        if self.peer_id_to_account_id.get(node_account_id) == node_account_id:
+            del self.account_id_to_uid[node_account_id]
+            del self.uid_to_account_id[node_id]
+            del self.peer_id_to_account_id[node_peer_id]
+
 
     def get_nearest_neighbors(
         self, query_id: DHTID, k: int, exclude: Optional[DHTID] = None
@@ -267,13 +295,8 @@ class DHTID(int):
             by default, generates a random dhtid from :nbits: random bits
         """
         source = random.getrandbits(nbits).to_bytes(nbits, byteorder="big") if source is None else source
-        print("DHTID source 1: ", source)
         source = MSGPackSerializer.dumps(source) if not isinstance(source, bytes) else source
-        print("DHTID source 2: ", source)
         raw_uid = cls.HASH_FUNC(source).digest()
-        print("DHTID raw_uid: ", raw_uid)
-        print("DHTID raw_uid.hex(): ", int(raw_uid.hex(), 16))
-        print("DHTID raw_uid.hex(): ", raw_uid.hex())
         return cls(int(raw_uid.hex(), 16))
 
     def xor_distance(self, other: Union[DHTID, Sequence[DHTID]]) -> Union[int, List[int]]:
@@ -305,55 +328,3 @@ class DHTID(int):
 
     def __bytes__(self):
         return self.to_bytes()
-
-class NodeIDGenerator:
-    HASH_FUNC = hashlib.sha256  # You can use any secure hash function
-
-    # @classmethod
-    # def generate_node_id(cls, peer_id: str, nbits: int = 256) -> str:
-    #     """
-    #     Generates a deterministic node ID based on the given peer_id.
-
-    #     Args:
-    #         peer_id (str): The unique identifier for the peer.
-    #         nbits (int): Number of bits to represent the node ID (default is 256).
-
-    #     Returns:
-    #         str: Deterministic node ID in hexadecimal format.
-    #     """
-    #     # Serialize the peer_id to bytes
-    #     source = MSGPackSerializer.dumps(peer_id)
-
-    #     # Hash the serialized source to get a deterministic digest
-    #     raw_uid = cls.HASH_FUNC(source).digest()
-
-    #     # Truncate or adjust the hash to the desired bit length
-    #     truncated_uid = int.from_bytes(raw_uid, "big") & ((1 << nbits) - 1)
-
-    #     # Convert the truncated hash to hexadecimal
-    #     node_id = f"0x{truncated_uid:0{nbits // 4}x}"
-    #     return node_id
-
-    @classmethod
-    def generate_node_id(cls, peer_id: str) -> str:
-        """
-        Generates a deterministic node ID with a length of 42 characters based on the given peer_id.
-
-        Args:
-            peer_id (str): The unique identifier for the peer.
-
-        Returns:
-            str: Deterministic node ID with a length of 42 characters.
-        """
-        # Serialize the peer_id to bytes
-        source = MSGPackSerializer.dumps(peer_id)
-
-        # Hash the serialized source to get a deterministic digest
-        raw_uid = cls.HASH_FUNC(source).digest()
-
-        # Truncate the hash to 160 bits (20 bytes)
-        truncated_uid = raw_uid[:20]  # Take the first 20 bytes
-
-        # Convert the truncated hash to hexadecimal
-        node_id = f"0x{truncated_uid.hex()}"
-        return node_id

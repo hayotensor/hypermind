@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import threading
 from abc import ABC, abstractmethod
+from typing import Optional
 
 from cryptography import exceptions
 from cryptography.hazmat.primitives import hashes, serialization
@@ -37,10 +38,16 @@ class PublicKey(ABC):
 _RSA_PADDING = padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH)
 _RSA_HASH_ALGORITHM = hashes.SHA256()
 
-
 class RSAPrivateKey(PrivateKey):
-    def __init__(self):
-        self._private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    def __init__(self, private_key: Optional[rsa.RSAPrivateKey] = None):
+        if private_key is None:
+            self._private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        else:
+            self._private_key = private_key
+
+
+    # def __init__(self):
+    #     self._private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
 
     _process_wide_key = None
     _process_wide_key_lock = threading.RLock()
@@ -104,3 +111,13 @@ class RSAPublicKey(PublicKey):
         if not isinstance(key, rsa.RSAPublicKey):
             raise ValueError(f"Expected an RSA public key, got {key}")
         return cls(key)
+
+    def public_bytes(
+        self,
+        encoding: serialization.Encoding,
+        format: serialization.PublicFormat,
+    ) -> bytes:
+        return self._public_key.public_bytes(
+            encoding=encoding, 
+            format=format
+        )

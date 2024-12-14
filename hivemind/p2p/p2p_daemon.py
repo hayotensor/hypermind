@@ -25,6 +25,8 @@ from hivemind.utils.asyncio import as_aiter, asingle
 from hivemind.utils.crypto import RSAPrivateKey
 from hivemind.utils.logging import get_logger, golog_level_to_python, loglevel, python_level_to_golog
 
+# from substrateinterface import Keypair, KeypairType
+
 logger = get_logger(__name__)
 
 
@@ -240,9 +242,15 @@ class P2P:
             control_maddr=self._daemon_listen_maddr,
             listen_maddr=self._client_listen_maddr,
             persistent_conn_max_msg_size=persistent_conn_max_msg_size,
-        )
+        )        
 
         await self._ping_daemon()
+
+        # verify signature against ``peer_id`` internally to ensure others can too
+        
+        # save RSA public key here for future referencing when using ``get_stub``
+
+        
         return self
 
     @classmethod
@@ -310,6 +318,8 @@ class P2P:
         self._client = await p2pclient.Client.create(self._daemon_listen_maddr, self._client_listen_maddr)
 
         await self._ping_daemon()
+
+        # TODO: require signature verification on peer_id 
         return self
 
     async def _ping_daemon(self) -> None:

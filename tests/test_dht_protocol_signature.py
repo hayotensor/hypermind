@@ -1,30 +1,20 @@
 import asyncio
-import hashlib
 import multiprocessing as mp
 import random
 import signal
-from typing import List, Optional, Sequence, Tuple
+from typing import List, Sequence, Tuple
 
-import multihash
 import pytest
 
 import hivemind
 from hivemind import P2P, PeerID, get_dht_time, get_logger
 from hivemind.dht import DHTID
-from hivemind.dht.protocol import DHTProtocol
+from hivemind.dht.protocol_signature import DHTProtocol
 from hivemind.dht.storage import DictionaryDHTValue
 from hivemind.p2p.multiaddr import Multiaddr
-from hivemind.utils.auth import AuthorizedRequestBase, AuthorizedResponseBase, AuthorizerBase
-from hivemind.utils.crypto import RSAPrivateKey, RSAPublicKey
-from hivemind.proto import crypto_pb2
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import padding, rsa
-
-from test_auth import MockAuthorizer2
 
 logger = get_logger(__name__)
 
-# pytest tests/test_dht_protocol.py -rP
 
 def maddrs_to_peer_ids(maddrs: List[Multiaddr]) -> List[PeerID]:
     return list({PeerID.from_base58(maddr["p2p"]) for maddr in maddrs})
@@ -84,9 +74,6 @@ async def test_dht_protocol():
             p2p, peer_id, bucket_size=20, depth_modulo=5, wait_timeout=5, num_replicas=3, client_mode=client_mode
         )
         logger.info(f"Self id={protocol.node_id}")
-
-        print("peer1_node_id", peer1_node_id)
-        print("await protocol.call_ping(peer1_id)", await protocol.call_ping(peer1_id))
 
         assert peer1_node_id == await protocol.call_ping(peer1_id)
 
@@ -174,90 +161,3 @@ async def test_empty_table():
     assert peer_id == await protocol.call_ping(peer_peer_id)
     assert not await protocol.call_ping(PeerID.from_base58("fakeid"))
     peer_proc.terminate()
-
-class MockAuthorizer(AuthorizerBase):
-    async def sign_request(self, request: AuthorizedRequestBase, service_public_key: Optional[RSAPublicKey]) -> None:
-        print("sign_request request: ", request)
-        print("sign_request service_public_key: ", service_public_key)
-        print("sign_request request node_id: ", request.peer.node_id)
-
-    async def validate_request(self, request: AuthorizedRequestBase) -> bool:
-        print("validate_request request: ", request)
-        print("validate_request request node_id: ", request.peer.node_id)
-        return True
-
-    async def sign_response(self, response: AuthorizedResponseBase, request: AuthorizedRequestBase) -> None:
-        print("sign_response response: ", response)
-        print("sign_response request: ", request)
-        print("sign_response request node_id: ", request.peer.node_id)
-
-
-    async def validate_response(self, response: AuthorizedResponseBase, request: AuthorizedRequestBase) -> bool:
-        print("validate_response response: ", response)
-        print("validate_response request: ", request)
-        print("validate_response request node_id: ", request.peer.node_id)
-
-        if len(request.peer.node_id) > 0:
-            node_id = "0x" + request.peer.node_id.hex()
-            print("validate_response request node_id decode: ", node_id)
-
-            sender_id = DHTID.from_bytes(request.peer.node_id)
-            print("validate_response request sender_id decode: ", sender_id)
-
-        return True
-
-# @pytest.mark.forked
-# @pytest.mark.asyncio
-# async def test_dht_protocol_stub():
-#     peer1_node_id, peer1_proc, peer1_id, peer1_maddrs = launch_protocol_listener()
-#     peer2_node_id, peer2_proc, peer2_id, _ = launch_protocol_listener(initial_peers=peer1_maddrs)
-
-#     for client_mode in [True, False]:  # note: order matters, this test assumes that first run uses client mode
-#         private_key = rsa.generate_private_key(
-#             public_exponent=65537,
-#             key_size=2048,
-#         )
-
-#         # Serialize the private key to DER format
-#         private_key = private_key.private_bytes(
-#             encoding=serialization.Encoding.DER,
-#             format=serialization.PrivateFormat.TraditionalOpenSSL,
-#             encryption_algorithm=serialization.NoEncryption()
-#         )
-
-#         protobuf = crypto_pb2.PrivateKey(key_type=crypto_pb2.KeyType.RSA, data=private_key)
-
-#         with open(f"tests/private_key_{peer1_node_id}.key", "wb") as f:
-#             f.write(protobuf.SerializeToString())
-
-
-#         peer_id = DHTID.generate()
-#         p2p = await P2P.create(initial_peers=peer1_maddrs)
-
-#         protocol = await DHTProtocol.create(
-#             p2p, 
-#             peer_id, 
-#             bucket_size=20, 
-#             depth_modulo=5, 
-#             wait_timeout=5, 
-#             num_replicas=3, 
-#             client_mode=client_mode,
-#         )
-#         logger.info(f"Self id={protocol.node_id}")
-
-
-#         assert peer1_node_id == await protocol.call_ping(peer1_id)
-
-#         peer1_id_stub = protocol.get_stub(peer1_id)
-#         print("peer1_id_stub", peer1_id_stub)
-#         print("peer1_id_stub", peer1_id_stub.__dict__)
-
-#         peer2_id_stub = protocol.get_stub(peer2_id)
-#         print("peer2_id_stub", peer2_id_stub)
-#         print("peer2_id", peer2_id)
-
-#         if not client_mode:
-#             await p2p.shutdown()
-
-#     peer1_proc.terminate()
-#     peer2_proc.terminate()

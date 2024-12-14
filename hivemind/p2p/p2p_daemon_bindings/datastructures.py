@@ -19,6 +19,7 @@ from hivemind.proto import crypto_pb2, p2pd_pb2
 
 class PeerID:
     def __init__(self, peer_id_bytes: bytes) -> None:
+        print("PeerID: ", peer_id_bytes)
         self._bytes = peer_id_bytes
         self._b58_str = base58.b58encode(self._bytes).decode()
 
