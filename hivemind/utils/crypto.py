@@ -46,7 +46,6 @@ class Ed25519PrivateKey(PrivateKey):
 
     @classmethod
     def process_wide(cls) -> Ed25519PrivateKey:
-        print("crypto.py Ed25519PrivateKey process_wide")
         if cls._process_wide_key is None:
             with cls._process_wide_key_lock:
                 if cls._process_wide_key is None:
@@ -54,16 +53,13 @@ class Ed25519PrivateKey(PrivateKey):
         return cls._process_wide_key
 
     def sign(self, data: bytes) -> bytes:
-        print("crypto.py Ed25519PrivateKey sign")
         signature = self._private_key.sign(data)
         return base64.b64encode(signature)
 
     def get_public_key(self) -> Ed25519PublicKey:
-        print("crypto.py Ed25519PrivateKey get_public_key")
         return Ed25519PublicKey(self._private_key.public_key())
 
     def to_bytes(self) -> bytes:
-        print("crypto.py Ed25519PrivateKey to_bytes")
         return self._private_key.private_bytes(
             encoding=serialization.Encoding.Raw,
             format=serialization.PrivateFormat.Raw,
@@ -71,17 +67,13 @@ class Ed25519PrivateKey(PrivateKey):
         )
 
     def __getstate__(self):
-        print("crypto.py Ed25519PrivateKey __getstate__")
         state = self.__dict__.copy()
         # Serializes the private key to make the class instances picklable
         state["_private_key"] = self.to_bytes()
         return state
 
     def __setstate__(self, state):
-        print("crypto.py Ed25519PrivateKey __setstate__")
         self.__dict__.update(state)
-        # self._private_key = serialization.load_der_private_key(self._private_key, password=None)
-        # self._private_key = serialization.load_pem_private_key(self._private_key, password=None)
         self._private_key = ed25519.Ed25519PrivateKey.from_private_bytes(self._private_key)
 
 
@@ -90,7 +82,6 @@ class Ed25519PublicKey(PublicKey):
         self._public_key = public_key
 
     def verify(self, data: bytes, signature: bytes) -> bool:
-        print("crypto.py Ed25519PublicKey verify")
         try:
             signature = base64.b64decode(signature)
 
@@ -102,20 +93,17 @@ class Ed25519PublicKey(PublicKey):
             return False
 
     def to_bytes(self) -> bytes:
-        print("crypto.py Ed25519PublicKey to_bytes")
         return self._public_key.public_bytes(
             encoding=serialization.Encoding.OpenSSH, format=serialization.PublicFormat.OpenSSH
         )
 
     def to_raw_bytes(self) -> bytes:
-        print("crypto.py Ed25519PublicKey to_raw_bytes")
         return self._public_key.public_bytes(
             encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw
         )
 
     @classmethod
     def from_bytes(cls, key: bytes) -> Ed25519PublicKey:
-        print("crypto.py Ed25519PublicKey from_bytes")
         key = serialization.load_ssh_public_key(key)
         if not isinstance(key, ed25519.Ed25519PublicKey):
             raise ValueError(f"Expected an Ed25519 public key, got {key}")

@@ -34,8 +34,6 @@ class Client:
         *,
         persistent_conn_max_msg_size: int = DEFAULT_MAX_MSG_SIZE,
     ) -> "Client":
-        print("Client control_maddr", control_maddr)
-        print("Client listen_maddr", listen_maddr)
         client = cls(_initialized_with_create=True)
 
         daemon_connector = DaemonConnector(control_maddr=control_maddr)
@@ -56,7 +54,6 @@ class Client:
 
     @asynccontextmanager
     async def listen(self) -> AsyncIterator["Client"]:
-        print("Client listen")
         """
         Starts to listen incoming connections for handlers registered via stream_handler.
         :return:
@@ -65,26 +62,21 @@ class Client:
             yield self
 
     async def add_unary_handler(self, proto: str, handler: TUnaryHandler, balanced: bool = False) -> None:
-        print("Client add_unary_handler")
         await self.control.add_unary_handler(proto, handler, balanced=balanced)
 
     async def remove_unary_handler(self, proto: str) -> None:
-        print("Client remove_unary_handler")
         await self.control.remove_unary_handler(proto)
 
     async def call_unary_handler(self, peer_id: PeerID, proto: str, data: bytes) -> bytes:
-        print("Client call_unary_handler")
         return await self.control.call_unary_handler(peer_id, proto, data)
 
     async def identify(self) -> Tuple[PeerID, Tuple[Multiaddr, ...]]:
-        print("Client identify")
         """
         Get current node peer id and list of addresses
         """
         return await self.control.identify()
 
     async def connect(self, peer_id: PeerID, maddrs: Iterable[Multiaddr]) -> None:
-        print("Client connect")
         """
         Connect to p2p node with specified addresses and peer id.
         :peer_id: node peer id you want connect to
@@ -108,7 +100,6 @@ class Client:
     async def stream_open(
         self, peer_id: PeerID, protocols: Sequence[str]
     ) -> Tuple[StreamInfo, asyncio.StreamReader, asyncio.StreamWriter]:
-        print("Client stream_open")
         """
         Open a stream to call other peer (with peer_id) handler for specified protocols
         :peer_id: other peer id

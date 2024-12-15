@@ -104,7 +104,6 @@ class MockAuthorizer2(AuthorizerBase):
         return f"{access_token.username} {access_token.public_key} {access_token.expiration_time}".encode()
 
     async def sign_request(self, request: AuthorizedRequestBase, service_public_key: Optional[Ed25519PublicKey]) -> None:
-        print("sign_request request: ", request)
         auth = request.auth
 
         # auth.client_access_token.CopyFrom(self._local_access_token)
@@ -122,9 +121,7 @@ class MockAuthorizer2(AuthorizerBase):
     _MAX_CLIENT_SERVICER_TIME_DIFF = timedelta(minutes=1)
 
     async def validate_request(self, request: AuthorizedRequestBase) -> bool:
-        print("validate_request request: ", request)
         auth = request.auth
-        print("validate_request auth: ", auth)
 
         # Get public key of signer
         try:
@@ -132,12 +129,7 @@ class MockAuthorizer2(AuthorizerBase):
         except:
             return False
 
-        print("validate_request client_public_key", client_public_key)
-        print("validate_request client_public_key to_bytes", client_public_key.to_bytes())
-        print("validate_request client_public_key to_raw_bytes", client_public_key.to_raw_bytes())
-
         signature = auth.signature
-        print("validate_request signature", signature)
         auth.signature = b""
         # Verify signature of the request from signer
         if not client_public_key.verify(request.SerializeToString(), signature):
@@ -163,12 +155,7 @@ class MockAuthorizer2(AuthorizerBase):
         return True
 
     async def sign_response(self, response: AuthorizedResponseBase, request: AuthorizedRequestBase) -> None:
-        print("sign_response response: ", response)
-        print("sign_response request: ", request)
-
         auth = response.auth
-        print("sign_response auth: ", auth)
-        print("sign_response auth.signature: ", auth.signature)
 
         local_access_token = await self.get_token()
         auth.service_access_token.CopyFrom(local_access_token)
@@ -180,8 +167,6 @@ class MockAuthorizer2(AuthorizerBase):
         auth.signature = self._local_private_key.sign(response.SerializeToString())
 
     async def validate_response(self, response: AuthorizedResponseBase, request: AuthorizedRequestBase) -> bool:
-        print("validate_response response: ", response)
-        print("validate_response request: ", request)
         auth = response.auth
         
         service_public_key = Ed25519PublicKey.from_bytes(auth.service_access_token.public_key)

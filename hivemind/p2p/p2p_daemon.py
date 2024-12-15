@@ -184,13 +184,9 @@ class P2P:
             process_kwargs["noListenAddrs"] = 1
 
         if identity_path is not None:
-            print("P2P.create identity_path is actually not None")
             if os.path.isfile(identity_path):
-                print("P2P.create identity_path isfile")
                 if check_if_identity_free and need_bootstrap:
-                    print("P2P.create identity_path check_if_identity_free and need_bootstrap")
                     logger.info(f"Checking that identity from `{identity_path}` is not used by other peers")
-                    print(f"Checking that identity from `{identity_path}` is not used by other peers")
                     if await cls.is_identity_taken(
                         identity_path,
                         initial_peers=initial_peers,
@@ -202,7 +198,6 @@ class P2P:
                         raise P2PDaemonError(f"Identity from `{identity_path}` is already taken by another peer")
             else:
                 logger.info(f"Generating new identity to be saved in `{identity_path}`")
-                print("P2P.create generate_identity")
                 # self.generate_identity(identity_path)
                 self.generate_identity_ed25519(identity_path)
                 # A newly generated identity is not taken with ~100% probability
@@ -243,8 +238,6 @@ class P2P:
             await self.shutdown()
             raise P2PDaemonError(f"Daemon failed to start in {startup_timeout:.1f} seconds")
 
-        print("P2P.create p2pclient.Client.create")
-
         self._client = await p2pclient.Client.create(
             control_maddr=self._daemon_listen_maddr,
             listen_maddr=self._client_listen_maddr,
@@ -265,13 +258,10 @@ class P2P:
         use_ipfs: bool,
         use_relay: bool,
     ) -> bool:
-        print("P2P.create is_identity_taken")
         with open(identity_path, "rb") as f:
-            print("P2P.create identity_path")
             peer_id = PeerID.from_identity_ed25519(f.read())
             # peer_id = PeerID.from_identity(f.read())
 
-        print("is_identity_taken peer_id", peer_id)
         anonymous_p2p = await cls.create(
             initial_peers=initial_peers,
             dht_mode="client",
@@ -290,7 +280,6 @@ class P2P:
 
     @staticmethod
     def generate_identity(identity_path: str) -> None:
-        print("generate_identity")
         private_key = Ed25519PrivateKey()
         protobuf = crypto_pb2.PrivateKey(key_type=crypto_pb2.KeyType.Ed25519, data=private_key.to_bytes())
 
@@ -305,7 +294,6 @@ class P2P:
 
     @staticmethod
     def generate_identity_ed25519(identity_path: str) -> None:
-        print("generate_identity_ed25519")
         private_key = Ed25519PrivateKey()
 
         private_key_bytes = private_key.to_bytes()
@@ -324,7 +312,6 @@ class P2P:
 
     @classmethod
     async def replicate(cls, daemon_listen_maddr: Multiaddr) -> "P2P":
-        print("P2P replicate")
         """
         Connect to existing p2p daemon
         :param daemon_listen_maddr: multiaddr of the existing p2p daemon
@@ -347,8 +334,6 @@ class P2P:
         return self
 
     async def _ping_daemon(self) -> None:
-        print("P2P _ping_daemon")
-        print("P2P _ping_daemon", self.peer_id)
         self.peer_id, self._visible_maddrs = await self._client.identify()
         logger.debug(f"Launched p2pd with peer id = {self.peer_id}, host multiaddrs = {self._visible_maddrs}")
 
@@ -382,12 +367,10 @@ class P2P:
 
     @property
     def daemon_listen_maddr(self) -> Multiaddr:
-        print("P2P daemon_listen_maddr")
         return self._daemon_listen_maddr
 
     @staticmethod
     async def send_raw_data(data: bytes, writer: asyncio.StreamWriter, *, chunk_size: int = 2**16) -> None:
-        print("P2P send_raw_data")
         writer.write(len(data).to_bytes(P2P.HEADER_LEN, P2P.BYTEORDER))
         data = memoryview(data)
         for offset in range(0, len(data), chunk_size):
@@ -396,7 +379,6 @@ class P2P:
 
     @staticmethod
     async def receive_raw_data(reader: asyncio.StreamReader) -> bytes:
-        print("P2P receive_raw_data")
         header = await reader.readexactly(P2P.HEADER_LEN)
         content_length = int.from_bytes(header, P2P.BYTEORDER)
         data = await reader.readexactly(content_length)
@@ -407,7 +389,6 @@ class P2P:
 
     @staticmethod
     async def send_protobuf(protobuf: Union[TOutputProtobuf, RPCError], writer: asyncio.StreamWriter) -> None:
-        print("P2P send_protobuf")
         if isinstance(protobuf, RPCError):
             writer.write(P2P.ERROR_MARKER)
         else:
@@ -418,7 +399,6 @@ class P2P:
     async def receive_protobuf(
         input_protobuf_type: Type[Message], reader: asyncio.StreamReader
     ) -> Tuple[Optional[TInputProtobuf], Optional[RPCError]]:
-        print("P2P receive_protobuf")
         msg_type = await reader.readexactly(1)
         if msg_type == P2P.MESSAGE_MARKER:
             protobuf = input_protobuf_type()
@@ -549,7 +529,6 @@ class P2P:
         stream_output: bool = False,
         balanced: bool = False,
     ) -> None:
-        print("P2P add_protobuf_handler")
         """
         :param stream_input: If True, assume ``handler`` to take ``TInputStream``
                              (not just ``TInputProtobuf``) as input.

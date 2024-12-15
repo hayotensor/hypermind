@@ -27,7 +27,6 @@ class Ed25519SignatureValidator(RecordValidatorBase):
     _cached_private_key = None
 
     def __init__(self, private_key: Optional[Ed25519PrivateKey] = None):
-        print("Ed25519SignatureValidator")
         if private_key is None:
             private_key = Ed25519PrivateKey.process_wide()
         self._private_key = private_key

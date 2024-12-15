@@ -20,8 +20,6 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 
 class PeerID:
     def __init__(self, peer_id_bytes: bytes) -> None:
-        print("PeerID __init__")
-        print("PeerID __init__ peer_id_bytes", peer_id_bytes)
         self._bytes = peer_id_bytes
         self._b58_str = base58.b58encode(self._bytes).decode()
 
@@ -64,13 +62,11 @@ class PeerID:
 
     @classmethod
     def from_base58(cls, base58_id: str) -> "PeerID":
-        print("PeerID b58decode")
         peer_id_bytes = base58.b58decode(base58_id)
         return cls(peer_id_bytes)
 
     @classmethod
     def from_identity(cls, data: bytes) -> "PeerID":
-        print("from_identity")
         """
         See [1] for the specification of how this conversion should happen.
 
@@ -104,7 +100,6 @@ class PeerID:
         [1] https://github.com/libp2p/specs/blob/master/peer-ids/peer-ids.md#peer-ids
         [2] https://github.com/libp2p/specs/blob/master/peer-ids/peer-ids.md#ed25519
         """
-        print("from_identity_ed25519")
         key_data = crypto_pb2.PrivateKey.FromString(data).data
         private_key = ed25519.Ed25519PrivateKey.from_private_bytes(key_data[:32])
 
@@ -138,13 +133,11 @@ class StreamInfo:
         return f"<StreamInfo peer_id={self.peer_id} addr={self.addr} proto={self.proto}>"
 
     def to_protobuf(self) -> p2pd_pb2.StreamInfo:
-        print("StreamInfo to_protobuf")
         pb_msg = p2pd_pb2.StreamInfo(peer=self.peer_id.to_bytes(), addr=self.addr.to_bytes(), proto=self.proto)
         return pb_msg
 
     @classmethod
     def from_protobuf(cls, pb_msg: p2pd_pb2.StreamInfo) -> "StreamInfo":
-        print("StreamInfo from_protobuf")
         stream_info = cls(peer_id=PeerID(pb_msg.peer), addr=Multiaddr(pb_msg.addr), proto=pb_msg.proto)
         return stream_info
 
@@ -159,7 +152,6 @@ class PeerInfo:
 
     @classmethod
     def from_protobuf(cls, peer_info_pb: p2pd_pb2.PeerInfo) -> "PeerInfo":
-        print("PeerInfo from_protobuf")
         peer_id = PeerID(peer_info_pb.id)
         addrs = [Multiaddr(addr) for addr in peer_info_pb.addrs]
         return PeerInfo(peer_id, addrs)

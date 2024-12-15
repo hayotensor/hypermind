@@ -58,13 +58,9 @@ async def read_unsigned_varint(stream: asyncio.StreamReader, max_bits: int = DEF
     has_next = True
     while has_next:
         data = await stream.readexactly(1)
-        print("read_unsigned_varint data", data)
         c = data[0]
-        print("read_unsigned_varint c", c)
         value = c & 0x7F
-        print("read_unsigned_varint value", value)
         result |= value << (iteration * 7)
-        print("read_unsigned_varint result", result)
         has_next = (c & 0x80) != 0
         iteration += 1
         if result >= max_int:
@@ -78,24 +74,14 @@ def raise_if_failed(response: p2pd_pb.Response) -> None:
 
 
 async def write_pbmsg(stream: asyncio.StreamWriter, pbmsg: PBMessage) -> None:
-    print("write_pbmsg")
-    print("write_pbmsg stream", stream)
-    print("write_pbmsg pbmsg", pbmsg)
     size = pbmsg.ByteSize()
     await write_unsigned_varint(stream, size)
     msg_bytes: bytes = pbmsg.SerializeToString()
-    print("write_pbmsg msg_bytes", msg_bytes)
     stream.write(msg_bytes)
     await stream.drain()
 
 
 async def read_pbmsg_safe(stream: asyncio.StreamReader, pbmsg: PBMessage) -> None:
-    print("read_pbmsg_safe")
-    print("read_pbmsg_safe pbmsg", pbmsg)
-    print("read_pbmsg_safe stream", stream)
     len_msg_bytes = await read_unsigned_varint(stream)
-    print("read_pbmsg_safe len_msg_bytes", len_msg_bytes)
     msg_bytes = await stream.readexactly(len_msg_bytes)
-    print("read_pbmsg_safe msg_bytes", msg_bytes)
-    print("read_pbmsg_safe pbmsg.ParseFromString(msg_bytes)", pbmsg.ParseFromString(msg_bytes))
     pbmsg.ParseFromString(msg_bytes)

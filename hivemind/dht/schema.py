@@ -19,7 +19,6 @@ class SchemaValidator(RecordValidatorBase):
     """
 
     def __init__(self, schema: Type[pydantic.BaseModel], allow_extra_keys: bool = True, prefix: Optional[str] = None):
-        print("schema __init__")
         """
         :param schema: The Pydantic model (a subclass of pydantic.BaseModel).
 
@@ -49,7 +48,6 @@ class SchemaValidator(RecordValidatorBase):
 
     @staticmethod
     def _patch_schema(schema: pydantic.BaseModel):
-        print("schema _patch_schema")
         # We set required=False because the validate() interface provides only one key at a time
         for field in schema.__fields__.values():
             field.required = False
@@ -57,7 +55,6 @@ class SchemaValidator(RecordValidatorBase):
         schema.Config.extra = pydantic.Extra.forbid
 
     def validate(self, record: DHTRecord) -> bool:
-        print("schema validate")
         """
         Validates ``record`` in two steps:
 
@@ -119,7 +116,6 @@ class SchemaValidator(RecordValidatorBase):
         return False
 
     def _deserialize_record(self, record: DHTRecord) -> Dict[str, Any]:
-        print("schema _deserialize_record")
         field_name = self._key_id_to_field_name[record.key]
         deserialized_value = DHTProtocol.serializer.loads(record.value)
         if record.subkey not in DHTProtocol.RESERVED_SUBKEYS:
@@ -135,7 +131,6 @@ class SchemaValidator(RecordValidatorBase):
 
     @staticmethod
     def _is_failed_due_to_extra_field(exc: pydantic.ValidationError):
-        print("schema _is_failed_due_to_extra_field")
         inner_errors = exc.errors()
         return (
             len(inner_errors) == 1
@@ -144,7 +139,6 @@ class SchemaValidator(RecordValidatorBase):
         )
 
     def merge_with(self, other: RecordValidatorBase) -> bool:
-        print("schema merge_with")
         if not isinstance(other, SchemaValidator):
             return False
 
@@ -154,7 +148,6 @@ class SchemaValidator(RecordValidatorBase):
         return True
 
     def __setstate__(self, state):
-        print("schema __setstate__")
         self.__dict__.update(state)
 
         # If unpickling happens in another process, the previous model modifications may be lost
@@ -163,9 +156,6 @@ class SchemaValidator(RecordValidatorBase):
 
 
 def conbytes(*, regex: bytes = None, **kwargs) -> Type[pydantic.BaseModel]:
-    print("schema conbytes")
-    print("schema conbytes regex", regex)
-    print("schema conbytes kwargs", kwargs)
     """
     Extend pydantic.conbytes() to support ``regex`` constraints (like pydantic.constr() does).
     """
