@@ -15,10 +15,13 @@ from multiaddr import Multiaddr
 
 from hivemind.p2p.multiaddr import Multiaddr, protocols
 from hivemind.proto import crypto_pb2, p2pd_pb2
+from cryptography.hazmat.primitives.asymmetric import ed25519
 
 
 class PeerID:
     def __init__(self, peer_id_bytes: bytes) -> None:
+        print("PeerID __init__")
+        print("PeerID __init__ peer_id_bytes", peer_id_bytes)
         self._bytes = peer_id_bytes
         self._b58_str = base58.b58encode(self._bytes).decode()
 
@@ -92,50 +95,30 @@ class PeerID:
         )
         return cls(encoded_digest)
 
+    @classmethod
     def from_identity_ed25519(cls, data: bytes) -> "PeerID":
         """
         See [1] for the specification of how this conversion should happen.
+        See [2] for the specification of how how to store Ed25519 keys [private_key][public_key].
 
         [1] https://github.com/libp2p/specs/blob/master/peer-ids/peer-ids.md#peer-ids
+        [2] https://github.com/libp2p/specs/blob/master/peer-ids/peer-ids.md#ed25519
         """
         print("from_identity_ed25519")
         key_data = crypto_pb2.PrivateKey.FromString(data).data
-
-        private_key = serialization.load_pem_private_key(key_data, password=None)
-
-        # encoded_public_key = private_key.public_key().public_bytes(
-        #     encoding=serialization.Encoding.PEM,
-        #     format=serialization.PublicFormat.SubjectPublicKeyInfo,
-        # )
-
-        # encoded_public_key = crypto_pb2.PublicKey(
-        #     key_type=crypto_pb2.Ed25519,
-        #     data=encoded_public_key,
-        # ).SerializeToString()
-
-        # encoded_digest = multihash.encode(
-        #     hashlib.sha256(encoded_public_key).digest(),
-        #     multihash.coerce_code("sha2-256"),
-        # )
-
-        # test
-        private_key_bytes = private_key.private_bytes(
-            encoding=serialization.Encoding.Raw,  # No encoding for raw bytes
-            format=serialization.PrivateFormat.Raw,    # No specific format for raw bytes
-            encryption_algorithm=serialization.NoEncryption()
-        )
+        private_key = ed25519.Ed25519PrivateKey.from_private_bytes(key_data[:32])
 
         public_key_bytes = private_key.public_key().public_bytes(
             encoding=serialization.Encoding.Raw,
             format=serialization.PublicFormat.Raw,
         )
 
-        combined_key_bytes = private_key_bytes + public_key_bytes
+        encoded_public_key = crypto_pb2.PublicKey(
+            key_type=crypto_pb2.Ed25519,
+            data=public_key_bytes,
+        ).SerializeToString()
 
-        encoded_digest = multihash.encode(
-            hashlib.sha256(combined_key_bytes).digest(),
-            multihash.coerce_code("sha2-256"),
-        )
+        encoded_digest = b"\x00$" + encoded_public_key
 
         return cls(encoded_digest)
 
@@ -155,11 +138,13 @@ class StreamInfo:
         return f"<StreamInfo peer_id={self.peer_id} addr={self.addr} proto={self.proto}>"
 
     def to_protobuf(self) -> p2pd_pb2.StreamInfo:
+        print("StreamInfo to_protobuf")
         pb_msg = p2pd_pb2.StreamInfo(peer=self.peer_id.to_bytes(), addr=self.addr.to_bytes(), proto=self.proto)
         return pb_msg
 
     @classmethod
     def from_protobuf(cls, pb_msg: p2pd_pb2.StreamInfo) -> "StreamInfo":
+        print("StreamInfo from_protobuf")
         stream_info = cls(peer_id=PeerID(pb_msg.peer), addr=Multiaddr(pb_msg.addr), proto=pb_msg.proto)
         return stream_info
 
@@ -174,6 +159,7 @@ class PeerInfo:
 
     @classmethod
     def from_protobuf(cls, peer_info_pb: p2pd_pb2.PeerInfo) -> "PeerInfo":
+        print("PeerInfo from_protobuf")
         peer_id = PeerID(peer_info_pb.id)
         addrs = [Multiaddr(addr) for addr in peer_info_pb.addrs]
         return PeerInfo(peer_id, addrs)

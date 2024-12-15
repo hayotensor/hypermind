@@ -16,6 +16,7 @@ from hivemind.p2p import PeerID
 
 from test_utils.dht_swarms import launch_dht_instances
 
+# ed25519 
 
 @pytest.mark.forked
 @pytest.mark.asyncio

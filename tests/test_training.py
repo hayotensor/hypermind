@@ -12,6 +12,7 @@ from hivemind.moe.client.expert import create_remote_experts
 from hivemind.moe.expert_uid import ExpertInfo
 from hivemind.moe.server import background_server
 
+# ed25519
 
 @pytest.mark.forked
 def test_training(max_steps: int = 100, threshold: float = 0.9):

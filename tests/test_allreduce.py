@@ -12,6 +12,7 @@ from hivemind.averaging.partition import TensorPartContainer, TensorPartReducer
 from hivemind.compression import deserialize_torch_tensor
 from hivemind.p2p import P2P
 
+# ed25519 
 
 @pytest.mark.forked
 @pytest.mark.asyncio

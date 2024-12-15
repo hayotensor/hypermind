@@ -6,6 +6,7 @@ from tempfile import TemporaryDirectory
 
 from hivemind.moe.server import background_server
 
+# ed25519
 
 def test_background_server_identity_path():
     with TemporaryDirectory() as tempdir:

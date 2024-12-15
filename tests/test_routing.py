@@ -6,6 +6,7 @@ from itertools import chain, zip_longest
 from hivemind.dht.routing import DHTID, RoutingTable
 from hivemind.utils.networking import LOCALHOST
 
+# ed25519
 
 def test_ids_basic():
     # basic functionality tests

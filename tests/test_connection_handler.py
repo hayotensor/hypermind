@@ -19,6 +19,7 @@ from hivemind.utils.serializer import MSGPackSerializer
 from hivemind.utils.streaming import split_for_streaming
 from hivemind.utils.tensor_descr import BatchTensorDescriptor
 
+# ed25519 
 
 @pytest.fixture
 async def client_stub():

@@ -19,6 +19,7 @@ from hivemind.moe.server.layers import name_to_block
 from hivemind.p2p.p2p_daemon_bindings.control import P2PHandlerError
 from hivemind.utils import BatchTensorDescriptor, MPFuture, get_dht_time
 
+# ed25519
 
 @pytest.mark.forked
 def test_moe():

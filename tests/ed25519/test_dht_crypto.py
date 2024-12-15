@@ -13,6 +13,8 @@ from hivemind.utils.timed_storage import get_dht_time
 
 # pytest tests/ed25519/test_dht_crypto.py -rP
 
+# pytest tests/ed25519/test_dht_crypto.py::test_ed25519_signature_validator -rP
+
 def test_ed25519_signature_validator():
     receiver_validator = Ed25519SignatureValidator()
     sender_validator = Ed25519SignatureValidator(Ed25519PrivateKey())
@@ -47,6 +49,7 @@ def test_ed25519_signature_validator():
     for record in signed_records:
         assert not receiver_validator.validate(record)
 
+# pytest tests/ed25519/test_dht_crypto.py::test_cached_key -rP
 
 def test_cached_key():
     first_validator = Ed25519SignatureValidator()
@@ -56,6 +59,8 @@ def test_cached_key():
     third_validator = Ed25519SignatureValidator(Ed25519PrivateKey())
     assert first_validator.local_public_key != third_validator.local_public_key
 
+
+# pytest tests/ed25519/test_dht_crypto.py::test_validator_instance_is_picklable -rP
 
 def test_validator_instance_is_picklable():
     # Needs to be picklable because the validator instance may be sent between processes
@@ -78,7 +83,6 @@ def test_validator_instance_is_picklable():
     assert original_validator.validate(signed_record)
     assert unpickled_validator.validate(signed_record)
 
-
 def get_signed_record(conn: mp.connection.Connection) -> DHTRecord:
     validator = conn.recv()
     record = conn.recv()
@@ -88,6 +92,7 @@ def get_signed_record(conn: mp.connection.Connection) -> DHTRecord:
     conn.send(record)
     return record
 
+# pytest tests/ed25519/test_dht_crypto.py::test_signing_in_different_process -rP
 
 def test_signing_in_different_process():
     parent_conn, child_conn = mp.Pipe()
@@ -106,6 +111,7 @@ def test_signing_in_different_process():
     assert b"[signature:" in signed_record.value
     assert validator.validate(signed_record)
 
+# pytest tests/ed25519/test_dht_crypto.py::test_dhtnode_signatures -rP
 
 @pytest.mark.forked
 @pytest.mark.asyncio

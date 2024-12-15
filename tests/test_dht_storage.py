@@ -4,6 +4,7 @@ from hivemind.dht.storage import DHTID, DHTLocalStorage, DictionaryDHTValue
 from hivemind.utils.serializer import MSGPackSerializer
 from hivemind.utils.timed_storage import get_dht_time
 
+# ed25519
 
 def test_store():
     d = DHTLocalStorage()

@@ -20,6 +20,7 @@ from hivemind.proto import p2pd_pb2 as p2pd_pb
 
 from test_utils.p2p_daemon import connect_safe, make_p2pd_pair_unix
 
+# ed25519
 
 def test_raise_if_failed_raises():
     resp = p2pd_pb.Response()

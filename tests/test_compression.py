@@ -24,6 +24,7 @@ from hivemind.utils.streaming import combine_from_streaming, split_for_streaming
 
 from test_utils.dht_swarms import launch_dht_instances
 
+# ed25519 (doesn't work, doesn't work in hivemind with no changes also)
 
 @pytest.mark.forked
 def test_tensor_compression(size=(128, 128, 64), alpha=5e-08, beta=0.0008):

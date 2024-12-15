@@ -20,6 +20,7 @@ from hivemind.p2p.multiaddr.protocols import (
     protocols_with_string,
 )
 
+# ed25519
 
 @pytest.mark.parametrize(
     "addr_str",

@@ -5,6 +5,7 @@ import pytest
 
 import hivemind
 
+# ed25519
 
 async def ping_to_client(dht, node, peer_id: str):
     return await node.protocol.call_ping(hivemind.PeerID.from_base58(str(peer_id)))

@@ -15,6 +15,7 @@ from hivemind.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
+# ed25519 
 
 class Fault(Enum):
     NONE = auto()

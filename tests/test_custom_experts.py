@@ -10,6 +10,7 @@ from hivemind.moe.server import background_server
 
 CUSTOM_EXPERTS_PATH = os.path.join(os.path.dirname(__file__), "test_utils", "custom_networks.py")
 
+# ed25519 
 
 @pytest.mark.forked
 def test_custom_expert(hid_dim=16):

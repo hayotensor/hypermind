@@ -16,8 +16,9 @@ from hivemind.optim.optimizer import Optimizer
 from hivemind.optim.power_sgd_averager import PowerSGDGradientAverager
 from hivemind.optim.progress_tracker import ProgressTracker
 from hivemind.optim.state_averager import ZERO_GRAD_SET_TO_NONE_DEFAULT, TrainingStateAverager
-from hivemind.utils.crypto import RSAPrivateKey
+from hivemind.utils.crypto import Ed25519PrivateKey
 
+# ed25519
 
 @pytest.mark.forked
 @pytest.mark.parametrize(
@@ -237,7 +238,7 @@ def test_progress_tracker():
             min_refresh_period=0.1,
             default_refresh_period=0.2,
             max_refresh_period=0.5,
-            private_key=RSAPrivateKey(),
+            private_key=Ed25519PrivateKey(),
             **kwargs,
         )
 
@@ -389,7 +390,7 @@ def _test_optimizer(
             optimizer=partial(torch.optim.SGD, lr=0.1),
             scheduler=partial(torch.optim.lr_scheduler.StepLR, gamma=0.5, step_size=1),
             dht=hivemind.DHT(initial_peers=dht.get_visible_maddrs(), client_mode=client_mode, start=True),
-            tracker_opts=dict(private_key=RSAPrivateKey(), max_refresh_period=1.0),
+            tracker_opts=dict(private_key=Ed25519PrivateKey(), max_refresh_period=1.0),
             averager_opts=dict(request_timeout=0.5),
             use_local_updates=use_local_updates,
             matchmaking_time=1.0,

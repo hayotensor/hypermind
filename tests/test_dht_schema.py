@@ -10,6 +10,7 @@ from hivemind.dht.schema import BytesWithPublicKey, SchemaValidator
 from hivemind.dht.validation import DHTRecord, RecordValidatorBase
 from hivemind.utils.timed_storage import get_dht_time
 
+# ed25519
 
 class SampleSchema(BaseModel):
     experiment_name: bytes

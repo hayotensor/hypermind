@@ -29,6 +29,7 @@ from hivemind.utils.asyncio import (
 from hivemind.utils.mpfuture import InvalidStateError
 from hivemind.utils.performance_ema import PerformanceEMA
 
+# ed25519
 
 @pytest.mark.forked
 def test_mpfuture_result():

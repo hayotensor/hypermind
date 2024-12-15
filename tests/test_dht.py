@@ -11,6 +11,7 @@ from hivemind.p2p.multiaddr import Multiaddr
 from test_utils.dht_swarms import launch_dht_instances
 from test_utils.networking import get_free_port
 
+# ed25519
 
 @pytest.mark.asyncio
 async def test_startup_error():

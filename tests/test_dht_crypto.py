@@ -11,6 +11,7 @@ from hivemind.dht.validation import DHTRecord
 from hivemind.utils.crypto import RSAPrivateKey
 from hivemind.utils.timed_storage import get_dht_time
 
+# ed25519  (use version in ed25519 directory)
 
 def test_rsa_signature_validator():
     receiver_validator = RSASignatureValidator()

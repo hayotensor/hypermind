@@ -17,6 +17,7 @@ from hivemind.utils.serializer import MSGPackSerializer
 
 from test_utils.networking import get_free_port
 
+# ed25519
 
 def is_process_running(pid: int) -> bool:
     return subprocess.run(["ps", "-p", str(pid)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
@@ -70,8 +71,9 @@ async def test_identity():
             await instance.shutdown()
 
     with pytest.raises(FileNotFoundError, match=r"The directory.+does not exist"):
-        P2P.generate_identity(id1_path)
+        P2P.generate_identity_ed25519(id1_path)
 
+# pytest tests/test_p2p_daemon.py::test_check_if_identity_free -rP
 
 @pytest.mark.asyncio
 async def test_check_if_identity_free():

@@ -12,6 +12,7 @@ from hivemind.moe.client.beam_search import MoEBeamSearcher
 from hivemind.moe.expert_uid import ExpertInfo, is_valid_prefix, is_valid_uid, split_uid
 from hivemind.moe.server.dht_handler import declare_experts, get_experts
 
+# ed25519
 
 @pytest.mark.forked
 def test_store_get_experts(n_peers=10):

@@ -15,6 +15,7 @@ BACKWARD_PASSES_AFTER_SAVE = 2
 EXPERT_NAME = "test_expert"
 PEAK_LR = 1.0
 
+# ed25519
 
 @pytest.fixture
 def example_experts():

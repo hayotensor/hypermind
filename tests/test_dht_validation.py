@@ -5,12 +5,13 @@ import pytest
 from pydantic.v1 import BaseModel, StrictInt
 
 import hivemind
-from hivemind.dht.crypto import RSASignatureValidator
+from hivemind.dht.crypto import Ed25519SignatureValidator
 from hivemind.dht.protocol import DHTProtocol
 from hivemind.dht.routing import DHTID
 from hivemind.dht.schema import BytesWithPublicKey, SchemaValidator
 from hivemind.dht.validation import CompositeValidator, DHTRecord
 
+# ed25519
 
 class SchemaA(BaseModel):
     field_a: bytes
@@ -24,17 +25,17 @@ class SchemaB(BaseModel):
 def validators_for_app():
     # Each application may add its own validator set
     return {
-        "A": [RSASignatureValidator(), SchemaValidator(SchemaA, allow_extra_keys=False)],
-        "B": [SchemaValidator(SchemaB, allow_extra_keys=False), RSASignatureValidator()],
+        "A": [Ed25519SignatureValidator(), SchemaValidator(SchemaA, allow_extra_keys=False)],
+        "B": [SchemaValidator(SchemaB, allow_extra_keys=False), Ed25519SignatureValidator()],
     }
 
 
 def test_composite_validator(validators_for_app):
     validator = CompositeValidator(validators_for_app["A"])
-    assert [type(item) for item in validator._validators] == [SchemaValidator, RSASignatureValidator]
+    assert [type(item) for item in validator._validators] == [SchemaValidator, Ed25519SignatureValidator]
 
     validator.extend(validators_for_app["B"])
-    assert [type(item) for item in validator._validators] == [SchemaValidator, RSASignatureValidator]
+    assert [type(item) for item in validator._validators] == [SchemaValidator, Ed25519SignatureValidator]
     assert len(validator._validators[0]._schemas) == 2
 
     local_public_key = validators_for_app["A"][0].local_public_key
@@ -46,7 +47,7 @@ def test_composite_validator(validators_for_app):
     )
 
     signed_record = dataclasses.replace(record, value=validator.sign_value(record))
-    # Expect only one signature since two RSASignatureValidatos have been merged
+    # Expect only one signature since two Ed25519SignatureValidators have been merged
     assert signed_record.value.count(b"[signature:") == 1
     # Expect successful validation since the second SchemaValidator has been merged to the first
     assert validator.validate(signed_record)

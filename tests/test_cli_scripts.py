@@ -5,6 +5,7 @@ from time import sleep
 
 _DHT_START_PATTERN = re.compile(r"Running a DHT instance. To connect other peers to this one, use (.+)$")
 
+# ed25519 
 
 def test_dht_connection_successful():
     dht_refresh_period = 1

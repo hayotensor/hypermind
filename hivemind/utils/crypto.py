@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import threading
 from abc import ABC, abstractmethod
+from typing import Optional
 
 from cryptography import exceptions
 from cryptography.hazmat.primitives import serialization
@@ -34,8 +35,11 @@ class PublicKey(ABC):
         ...
 
 class Ed25519PrivateKey(PrivateKey):
-    def __init__(self):
-        self._private_key = ed25519.Ed25519PrivateKey.generate()
+    def __init__(self, private_key: Optional[ed25519.Ed25519PrivateKey] = None):
+        if private_key is None:
+            self._private_key = ed25519.Ed25519PrivateKey.generate()
+        else:
+            self._private_key = private_key
 
     _process_wide_key = None
     _process_wide_key_lock = threading.RLock()
@@ -77,8 +81,8 @@ class Ed25519PrivateKey(PrivateKey):
         print("crypto.py Ed25519PrivateKey __setstate__")
         self.__dict__.update(state)
         # self._private_key = serialization.load_der_private_key(self._private_key, password=None)
-        self._private_key = serialization.load_pem_private_key(self._private_key, password=None)
-        # self._private_key = ed25519.Ed25519PrivateKey.from_private_bytes(self._private_key)
+        # self._private_key = serialization.load_pem_private_key(self._private_key, password=None)
+        self._private_key = ed25519.Ed25519PrivateKey.from_private_bytes(self._private_key)
 
 
 class Ed25519PublicKey(PublicKey):

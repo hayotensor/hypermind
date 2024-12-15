@@ -15,6 +15,7 @@ from hivemind.p2p.multiaddr import Multiaddr
 
 logger = get_logger(__name__)
 
+# ed25519
 
 def maddrs_to_peer_ids(maddrs: List[Multiaddr]) -> List[PeerID]:
     return list({PeerID.from_base58(maddr["p2p"]) for maddr in maddrs})
