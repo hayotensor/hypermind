@@ -14,6 +14,7 @@ multiaddr @ git+https://github.com/multiformats/py-multiaddr.git@e01dbd38f2c0464
 cryptography>=3.4.6
 pydantic>=2.0.0
 packaging>=20.9
+py-multibase>=1.0.3
 tenacity>=8.2.3
 python-dotenv>=1.0.1
 substrate-interface>=1.0.0

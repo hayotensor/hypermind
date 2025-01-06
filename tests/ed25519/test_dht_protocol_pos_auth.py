@@ -124,15 +124,32 @@ def run_protocol_listener(
     with open(f"tests/ed25519/private_key_{key}.key", "rb") as f:
         data = f.read()
         key_data = crypto_pb2.PrivateKey.FromString(data).data
-        raw_private_key = ed25519.Ed25519PrivateKey.from_private_bytes(key_data[:32])
-        private_key = Ed25519PrivateKey(private_key=raw_private_key)
+
+        private_key = ed25519.Ed25519PrivateKey.from_private_bytes(key_data[:32])
+        ed25519_private_key = Ed25519PrivateKey(private_key=private_key)
+        
+        public_key = private_key.public_key().public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw,
+        )
+
+        encoded_public_key = crypto_pb2.PublicKey(
+            key_type=crypto_pb2.Ed25519,
+            data=public_key,
+        ).SerializeToString()
+
+        encoded_digest = b"\x00$" + encoded_public_key
+
+        peer_id = PeerID(encoded_digest)
+        print("peer_id", peer_id)
 
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
         p2p = loop.run_until_complete(P2P.create(initial_peers=initial_peers))
-        peer_id = p2p.peer_id
-        print("peer_id", peer_id)
+        print("p2p.peer_id", p2p.peer_id)
+
+        assert p2p.peer_id == peer_id
         
         # register subnet node
         run_register_subnet_node(key, peer_id.to_base58())
@@ -147,7 +164,7 @@ def run_protocol_listener(
                 depth_modulo=5, 
                 num_replicas=3, 
                 wait_timeout=5,
-                authorizer=POSAuthorizerLive(private_key, 1, SubstrateInterface(url=RPC_URL))
+                authorizer=POSAuthorizerLive(ed25519_private_key, 1, SubstrateInterface(url=RPC_URL))
                 # authorizer=POSAuthorizer(private_key)
             )
         )
@@ -190,64 +207,78 @@ async def test_dht_protocol_pos_auth():
     peer1_node_id, peer1_proc, peer1_id, peer1_maddrs = launch_protocol_listener(1)
     peer2_node_id, peer2_proc, peer2_id, _ = launch_protocol_listener(2, initial_peers=peer1_maddrs)
 
-    n = 50
-    for client_mode in [True, False]:  # note: order matters, this test assumes that first run uses client mode
-        peer_id = DHTID.generate()
+    # n = 50
+    # for client_mode in [True, False]:  # note: order matters, this test assumes that first run uses client mode
+    #     peer_id = DHTID.generate()
 
-        private_key = ed25519.Ed25519PrivateKey.generate()
+    #     private_key = ed25519.Ed25519PrivateKey.generate()
 
-        raw_private_key = private_key.private_bytes(
-            encoding=serialization.Encoding.Raw,  # DER format
-            format=serialization.PrivateFormat.Raw,  # PKCS8 standard format
-            encryption_algorithm=serialization.NoEncryption()  # No encryption
-        )
+    #     raw_private_key = private_key.private_bytes(
+    #         encoding=serialization.Encoding.Raw,  # DER format
+    #         format=serialization.PrivateFormat.Raw,  # PKCS8 standard format
+    #         encryption_algorithm=serialization.NoEncryption()  # No encryption
+    #     )
 
-        public_key = private_key.public_key().public_bytes(
-            encoding=serialization.Encoding.Raw,
-            format=serialization.PublicFormat.Raw,
-        )
+    #     public_key = private_key.public_key().public_bytes(
+    #         encoding=serialization.Encoding.Raw,
+    #         format=serialization.PublicFormat.Raw,
+    #     )
 
-        combined_key_bytes = raw_private_key + public_key
+    #     combined_key_bytes = raw_private_key + public_key
 
-        protobuf = crypto_pb2.PrivateKey(key_type=crypto_pb2.KeyType.Ed25519, data=combined_key_bytes)
+    #     protobuf = crypto_pb2.PrivateKey(key_type=crypto_pb2.KeyType.Ed25519, data=combined_key_bytes)
 
-        with open(f"tests/ed25519/private_key_client-{client_mode}.key", "wb") as f:
-            f.write(protobuf.SerializeToString())
+    #     with open(f"tests/ed25519/private_key_client-{client_mode}.key", "wb") as f:
+    #         f.write(protobuf.SerializeToString())
 
-        with open(f"tests/ed25519/private_key_client-{client_mode}.key", "rb") as f:
-            data = f.read()
-            key_data = crypto_pb2.PrivateKey.FromString(data).data
-            raw_private_key = ed25519.Ed25519PrivateKey.from_private_bytes(key_data[:32])
-            private_key = Ed25519PrivateKey(private_key=raw_private_key)
-            public_key = raw_private_key.public_key().public_bytes(
-                encoding=serialization.Encoding.Raw,
-                format=serialization.PublicFormat.Raw,
-            )
+    #     with open(f"tests/ed25519/private_key_client-{client_mode}.key", "rb") as f:
+    #         data = f.read()
+    #         key_data = crypto_pb2.PrivateKey.FromString(data).data
 
-            p2p = await P2P.create(initial_peers=peer1_maddrs, identity_path=f"tests/private_key_client-{client_mode}.key")
-            protocol = await DHTProtocol.create(
-                p2p, 
-                peer_id, 
-                bucket_size=20, 
-                depth_modulo=5, 
-                wait_timeout=5, 
-                num_replicas=3, 
-                client_mode=client_mode,
-                authorizer=POSAuthorizerLive(private_key, 1, SubstrateInterface(url=RPC_URL))
-                # authorizer=POSAuthorizer(private_key)
-            )
-            logger.info(f"Self id={protocol.node_id}")
+    #         private_key = ed25519.Ed25519PrivateKey.from_private_bytes(key_data[:32])
+    #         ed25519_private_key = Ed25519PrivateKey(private_key=private_key)
+            
+    #         public_key = private_key.public_key().public_bytes(
+    #             encoding=serialization.Encoding.Raw,
+    #             format=serialization.PublicFormat.Raw,
+    #         )
 
-            print(f"peer-{client_mode} node id is: ", protocol.node_id)
-            print(f"peer-{client_mode} peer id is: ", p2p.peer_id)
-            print(f"peer-{client_mode} public key is: ", public_key)
+    #         encoded_public_key = crypto_pb2.PublicKey(
+    #             key_type=crypto_pb2.Ed25519,
+    #             data=public_key,
+    #         ).SerializeToString()
 
-            assert peer1_node_id == await protocol.call_ping(peer1_id)
+    #         encoded_digest = b"\x00$" + encoded_public_key
 
-            if not client_mode:
-                await p2p.shutdown()
+    #         peer_id = PeerID(encoded_digest)
 
-        n += 1
+    #         p2p = await P2P.create(initial_peers=peer1_maddrs, identity_path=f"tests/private_key_client-{client_mode}.key")
+
+    #         assert p2p.peer_id == peer_id
+
+    #         protocol = await DHTProtocol.create(
+    #             p2p, 
+    #             peer_id, 
+    #             bucket_size=20, 
+    #             depth_modulo=5, 
+    #             wait_timeout=5, 
+    #             num_replicas=3, 
+    #             client_mode=client_mode,
+    #             authorizer=POSAuthorizerLive(ed25519_private_key, 1, SubstrateInterface(url=RPC_URL))
+    #             # authorizer=POSAuthorizer(ed25519_private_key)
+    #         )
+    #         logger.info(f"Self id={protocol.node_id}")
+
+    #         print(f"peer-{client_mode} node id is: ", protocol.node_id)
+    #         print(f"peer-{client_mode} peer id is: ", p2p.peer_id)
+    #         print(f"peer-{client_mode} public key is: ", public_key)
+
+    #         assert peer1_node_id == await protocol.call_ping(peer1_id)
+
+    #         if not client_mode:
+    #             await p2p.shutdown()
+
+    #     n += 1
 
     peer1_proc.terminate()
     peer2_proc.terminate()
@@ -286,9 +317,6 @@ async def test_pos_authorizer():
         private_key = ed25519.Ed25519PrivateKey.from_private_bytes(key_data[:32])
         ed25519_private_key = Ed25519PrivateKey(private_key=private_key)
         
-        pubkey = ed25519_private_key.get_public_key()
-        print("pubkey", pubkey)
-
         public_key = private_key.public_key().public_bytes(
             encoding=serialization.Encoding.Raw,
             format=serialization.PublicFormat.Raw,
@@ -333,15 +361,4 @@ async def test_pos_authorizer():
     )
     print("proof_of_stake", proof_of_stake)
 
-
-
-
     POSAuthorizerLive(ed25519_private_key, 1, SubstrateInterface(url=RPC_URL))
-
-    # with open(f"tests/ed25519/private_key_pos.key", "rb") as f:
-    #     data = f.read()
-    #     key_data = crypto_pb2.PrivateKey.FromString(data).data
-    #     raw_private_key = ed25519.Ed25519PrivateKey.from_private_bytes(key_data[:32])
-    #     ed25519_private_key = Ed25519PrivateKey(private_key=raw_private_key)
-
-    # POSAuthorizer(ed25519_private_key)

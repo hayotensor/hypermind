@@ -2,9 +2,9 @@ import asyncio
 import functools
 import secrets
 from abc import ABC, abstractmethod
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
 from enum import Enum
-from typing import Optional
+from typing import Dict, Optional
 
 from hivemind.proto.auth_pb2 import AccessToken, RequestAuthInfo, ResponseAuthInfo
 from hivemind.p2p.p2p_daemon_bindings.datastructures import PeerID
@@ -317,30 +317,15 @@ class POSAuthorizerLive(AuthorizerBase):
         self.subnet_id = subnet_id
         self.interface = interface
 
+        self.peer_id_to_last_update: Dict[PeerID, int] = dict()
+        self.pos_interim = 60
+
         """
         Ensure self is staked
         """
         try:
-            encoded_public_key = crypto_pb2.PublicKey(
-                key_type=crypto_pb2.Ed25519,
-                data=self._local_public_key.to_raw_bytes(),
-            ).SerializeToString()
-
-            encoded_public_key = b"\x00$" + encoded_public_key
-
-            peer_id = PeerID(encoded_public_key)
-
-            peer_id_vec = [ord(char) for char in peer_id.to_base58()]
-
-            print("peer_id in auther", peer_id.to_base58())
-            
-            proof_of_stake = is_subnet_node_by_peer_id(
-                self.interface,
-                self.subnet_id,
-                peer_id_vec
-            )
-
-            print("proof_of_stake", proof_of_stake)
+            proof_of_stake = self.proof_of_stake(self._local_public_key)
+            print("init proof of stake", proof_of_stake)
 
             assert proof_of_stake, f"Invalid proof-of-stake for subnet ID {self.subnet_id}" 
         except Exception as e:
@@ -400,22 +385,8 @@ class POSAuthorizerLive(AuthorizerBase):
 
         # TODO: Add ``last_updated`` mapping to avoid over-checking POS
         try:
-            encoded_public_key = crypto_pb2.PublicKey(
-                key_type=crypto_pb2.Ed25519,
-                data=client_public_key.to_raw_bytes(),
-            ).SerializeToString()
-
-            encoded_public_key = b"\x00$" + encoded_public_key
-
-            peer_id = PeerID(encoded_public_key)
-
-            peer_id_vec = [ord(char) for char in peer_id.to_base58()]
-
-            proof_of_stake = is_subnet_node_by_peer_id(
-                self.interface,
-                self.subnet_id,
-                peer_id_vec
-            )
+            proof_of_stake = self.proof_of_stake(client_public_key)
+            print("validate proof of stake", proof_of_stake)
 
             return proof_of_stake
         except Exception as e:
@@ -451,6 +422,55 @@ class POSAuthorizerLive(AuthorizerBase):
             return False
 
         return True
+
+    def add_or_update_peer_id(self, peer_id: PeerID):
+        timestamp = time.time()
+        self.peer_id_to_last_update[peer_id] = timestamp
+
+    def get_peer_id_last_update(self, peer_id: PeerID) -> int:
+        if peer_id not in self.peer_id_to_last_update:
+            return 0
+        
+        return self.peer_id_to_last_update[peer_id]
+
+    def proof_of_stake(self, public_key: Ed25519PublicKey) -> bool:        
+        peer_id = self.get_peer_id(public_key)
+        last_update = self.get_peer_id_last_update(peer_id)
+
+        timestamp = time.time()
+
+        if last_update != 0 and timestamp - last_update < self.pos_interim:
+            return True
+
+        self.add_or_update_peer_id(peer_id)
+        peer_id_vec = self.to_vec_u8(peer_id.to_base58())
+        proof_of_stake = self.is_staked(peer_id_vec)
+
+        return proof_of_stake
+
+
+    def get_peer_id(self, public_key: Ed25519PublicKey) -> PeerID:
+        encoded_public_key = crypto_pb2.PublicKey(
+            key_type=crypto_pb2.Ed25519,
+            data=public_key.to_raw_bytes(),
+        ).SerializeToString()
+
+        encoded_public_key = b"\x00$" + encoded_public_key
+
+        peer_id = PeerID(encoded_public_key)
+
+        return peer_id
+    
+    def to_vec_u8(self, string):
+        return [ord(char) for char in string]
+
+    def is_staked(self, peer_id_vector) -> bool:
+        proof_of_stake = is_subnet_node_by_peer_id(
+            self.interface,
+            self.subnet_id,
+            peer_id_vector
+        )
+        return proof_of_stake
 
     @property
     def local_public_key(self) -> Ed25519PublicKey:
