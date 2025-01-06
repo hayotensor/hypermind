@@ -703,10 +703,17 @@ MC4CAQAwBQYDK2VwBCIEIH7sjlQYpBCnodJqPqYS2441L4wOOqyfLoc/SzTTC1h8
         encryption_algorithm=serialization.NoEncryption()  # No encryption
     )
 
+    encoded_public_key = pem_private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+    print("encoded_public_key", encoded_public_key)
+
     raw_public_key = pem_private_key.public_key().public_bytes(
         encoding=serialization.Encoding.Raw,
         format=serialization.PublicFormat.Raw,
     )
+    print("raw_public_key", raw_public_key)
 
     combined_key_bytes = raw_private_key + raw_public_key
 
@@ -995,3 +1002,37 @@ MC4CAQAwBQYDK2VwBCIEIGd73zfxu+jH4XPc4BWs9FG/38CDEw59RMlkw13W+e2f
     response.peer.node_id = service_node_id.to_bytes()
     await service_authorizer.sign_response(response, request)
     assert await client_authorizer.validate_response(response, request)
+
+
+
+# pytest tests/ed25519/test_auth.py::test_get_public_key -rP
+
+@pytest.mark.asyncio
+async def test_get_public_key():
+    private_key = ed25519.Ed25519PrivateKey.generate()
+
+    raw_private_key = private_key.private_bytes(
+        encoding=serialization.Encoding.Raw,  # DER format
+        format=serialization.PrivateFormat.Raw,  # PKCS8 standard format
+        encryption_algorithm=serialization.NoEncryption()  # No encryption
+    )
+
+    public_key = private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw,
+    )
+
+    combined_key_bytes = raw_private_key + public_key
+
+    protobuf = crypto_pb2.PrivateKey(key_type=crypto_pb2.KeyType.Ed25519, data=combined_key_bytes)
+
+    with open(f"tests/ed25519/private_key_test.key", "wb") as f:
+        f.write(protobuf.SerializeToString())
+
+    with open(f"tests/ed25519/private_key_test.key", "rb") as f:
+        data = f.read()
+        key_data = crypto_pb2.PrivateKey.FromString(data).data
+        raw_private_key = ed25519.Ed25519PrivateKey.from_private_bytes(key_data[:32])
+        print("raw_private_key public_key", raw_private_key.public_key())
+        private_key = Ed25519PrivateKey(private_key=raw_private_key)
+        print("private_key get_public_key", private_key.get_public_key())

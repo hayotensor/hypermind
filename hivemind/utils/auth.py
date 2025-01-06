@@ -2,7 +2,7 @@ import asyncio
 import functools
 import secrets
 from abc import ABC, abstractmethod
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Optional
 
@@ -10,8 +10,11 @@ from hivemind.proto.auth_pb2 import AccessToken, RequestAuthInfo, ResponseAuthIn
 from hivemind.p2p.p2p_daemon_bindings.datastructures import PeerID
 from hivemind.utils.crypto import Ed25519PrivateKey, Ed25519PublicKey
 from hivemind.utils.logging import get_logger
+from hivemind.utils.substrate import is_subnet_node_by_peer_id
 from hivemind.utils.timed_storage import TimedStorage, get_dht_time
 from hivemind.proto import crypto_pb2
+
+from substrateinterface import SubstrateInterface
 
 logger = get_logger(__name__)
 
@@ -171,17 +174,185 @@ class TokenAuthorizerBase(AuthorizerBase):
         return True
 
 class POSAuthorizer(AuthorizerBase):
+    """
+    Implements a proof-of-stake authorization protocol using Ed25519 keys
+    Checks the Hypertensor network for nodes ``peer_id`` is staked.
+    The ``peer_id`` is retrieved using the Ed25519 public key
+    """
     def __init__(self, local_private_key: Ed25519PrivateKey):
         super().__init__()
 
         self._local_private_key = local_private_key
         self._local_public_key = local_private_key.get_public_key()
+        print("POSAuthorizer _local_private_key", self._local_private_key)
+        print("POSAuthorizer _local_public_key", self._local_public_key)
 
     async def get_token(self) -> AccessToken:
+        # Uses the built in Hivemind ``AccessToken`` format
         token = AccessToken(
             username='',
             public_key=self._local_public_key.to_bytes(),
-            expiration_time=str(datetime.utcnow() + timedelta(minutes=1)),
+            expiration_time=str(datetime.now(timezone.utc) + timedelta(minutes=1)),
+        )
+        token.signature = self._local_private_key.sign(self._token_to_bytes(token))
+        return token
+
+    @staticmethod
+    def _token_to_bytes(access_token: AccessToken) -> bytes:
+        return f"{access_token.username} {access_token.public_key} {access_token.expiration_time}".encode()
+
+    async def sign_request(self, request: AuthorizedRequestBase, service_public_key: Optional[Ed25519PublicKey]) -> None:
+        auth = request.auth
+
+        # auth.client_access_token.CopyFrom(self._local_access_token)
+        local_access_token = await self.get_token()
+        auth.client_access_token.CopyFrom(local_access_token)
+
+        if service_public_key is not None:
+            auth.service_public_key = service_public_key.to_bytes()
+        auth.time = get_dht_time()
+        auth.nonce = secrets.token_bytes(8)
+
+        assert auth.signature == b""
+        auth.signature = self._local_private_key.sign(request.SerializeToString())
+
+    _MAX_CLIENT_SERVICER_TIME_DIFF = timedelta(minutes=1)
+
+    async def validate_request(self, request: AuthorizedRequestBase) -> bool:
+        auth = request.auth
+
+        # Get public key of signer
+        try:
+            client_public_key = Ed25519PublicKey.from_bytes(auth.client_access_token.public_key)
+        except:
+            return False
+
+        signature = auth.signature
+        auth.signature = b""
+        # Verify signature of the request from signer
+        if not client_public_key.verify(request.SerializeToString(), signature):
+            logger.debug("Request has invalid signature")
+            return False
+
+        if auth.service_public_key and auth.service_public_key != self._local_public_key.to_bytes():
+            logger.debug("Request is generated for a peer with another public key")
+            return False
+
+        # TODO: Add ``last_updated`` mapping to avoid over-checking POS
+        try:
+            encoded_public_key = crypto_pb2.PublicKey(
+                key_type=crypto_pb2.Ed25519,
+                data=client_public_key.to_raw_bytes(),
+            ).SerializeToString()
+
+            # For Ed25519
+            encoded_public_key = b"\x00$" + encoded_public_key
+
+            peer_id = PeerID(encoded_public_key)
+
+            # TODO: Check proof-of-stake
+            # Check if subnet node is >=registered classification
+            # on-chain logic only allows being a subnet if staked
+            # so we only check if they're an acitivated node
+            proof_of_stake = True
+
+            if not proof_of_stake:
+                return False
+
+            return True
+        except Exception as e:
+            logger.debug("Proof of stake failed", exc_info=True)
+            return False
+
+        return True
+
+    async def sign_response(self, response: AuthorizedResponseBase, request: AuthorizedRequestBase) -> None:
+        auth = response.auth
+
+        local_access_token = await self.get_token()
+        auth.service_access_token.CopyFrom(local_access_token)
+
+        # auth.service_access_token.CopyFrom(self._local_public_key)
+        auth.nonce = request.auth.nonce
+
+        assert auth.signature == b""
+        auth.signature = self._local_private_key.sign(response.SerializeToString())
+
+    async def validate_response(self, response: AuthorizedResponseBase, request: AuthorizedRequestBase) -> bool:
+        auth = response.auth
+        
+        service_public_key = Ed25519PublicKey.from_bytes(auth.service_access_token.public_key)
+        signature = auth.signature
+        auth.signature = b""
+        if not service_public_key.verify(response.SerializeToString(), signature):
+            logger.debug("Response has invalid signature")
+            return False
+
+        if auth.nonce != request.auth.nonce:
+            logger.debug("Response is generated for another request")
+            return False
+
+        return True
+
+    @property
+    def local_public_key(self) -> Ed25519PublicKey:
+        return self._local_public_key
+
+class POSAuthorizerLive(AuthorizerBase):
+    """
+    Implements a proof-of-stake authorization protocol using Ed25519 keys
+    Checks the Hypertensor network for nodes ``peer_id`` is staked.
+    The ``peer_id`` is retrieved using the Ed25519 public key
+    """
+    def __init__(
+        self, 
+        local_private_key: Ed25519PrivateKey, 
+        subnet_id: int, 
+        interface: SubstrateInterface
+    ):
+        super().__init__()
+
+        self._local_private_key = local_private_key
+        self._local_public_key = local_private_key.get_public_key()
+        self.subnet_id = subnet_id
+        self.interface = interface
+
+        """
+        Ensure self is staked
+        """
+        try:
+            encoded_public_key = crypto_pb2.PublicKey(
+                key_type=crypto_pb2.Ed25519,
+                data=self._local_public_key.to_raw_bytes(),
+            ).SerializeToString()
+
+            encoded_public_key = b"\x00$" + encoded_public_key
+
+            peer_id = PeerID(encoded_public_key)
+
+            peer_id_vec = [ord(char) for char in peer_id.to_base58()]
+
+            print("peer_id in auther", peer_id.to_base58())
+            
+            proof_of_stake = is_subnet_node_by_peer_id(
+                self.interface,
+                self.subnet_id,
+                peer_id_vec
+            )
+
+            print("proof_of_stake", proof_of_stake)
+
+            assert proof_of_stake, f"Invalid proof-of-stake for subnet ID {self.subnet_id}" 
+        except Exception as e:
+            logger.error(e, exc_info=True)
+
+
+    async def get_token(self) -> AccessToken:
+        # Uses the built in Hivemind ``AccessToken`` format
+        token = AccessToken(
+            username='',
+            public_key=self._local_public_key.to_bytes(),
+            expiration_time=str(datetime.now(timezone.utc) + timedelta(minutes=1)),
         )
         token.signature = self._local_private_key.sign(self._token_to_bytes(token))
         return token
@@ -238,9 +409,17 @@ class POSAuthorizer(AuthorizerBase):
 
             peer_id = PeerID(encoded_public_key)
 
-            # TODO: Check proof-of-stake
-        except:
-            logger.debug("Proof of stake failed")
+            peer_id_vec = [ord(char) for char in peer_id.to_base58()]
+
+            proof_of_stake = is_subnet_node_by_peer_id(
+                self.interface,
+                self.subnet_id,
+                peer_id_vec
+            )
+
+            return proof_of_stake
+        except Exception as e:
+            logger.debug("Proof of stake failed", exc_info=True)
             return False
 
         return True
