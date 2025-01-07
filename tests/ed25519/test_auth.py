@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import time
 import hashlib
 import secrets
 from typing import Optional
@@ -659,6 +660,8 @@ async def test_valid_request_and_response_with_pos_and_keys():
     await client_authorizer.sign_request(request, service_authorizer.local_public_key)
     assert await service_authorizer.validate_request(request)
 
+    assert service_authorizer.get_peer_id_last_update(client_peer_id) > 0
+
     response = dht_pb2.PingResponse()
     service_node_id = DHTID.generate()
 
@@ -680,7 +683,6 @@ async def test_valid_request_and_response_with_pos_and_keys_invalid():
     ).SerializeToString()
     client_encoded_digest = b"\x00$" + client_encoded_public_key
     client_peer_id = PeerID(client_encoded_digest)
-    # run_register_subnet_node(1, client_peer_id.to_base58())
     client_authorizer = POSAuthorizerLive(ed25519_private_key_client, 1, SubstrateInterface(url=RPC_URL))
 
     #service

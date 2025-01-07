@@ -93,6 +93,7 @@ def run_register_subnet_node(key: int, peer_id: str):
             None,
             None
         )
+        print("receipt.is_success", receipt.is_success)
         assert receipt.is_success
     except Exception as e:
         print(f"Error running register_subnet_node: {e}")

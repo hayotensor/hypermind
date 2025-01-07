@@ -184,6 +184,8 @@ class POSAuthorizer(AuthorizerBase):
 
         self._local_private_key = local_private_key
         self._local_public_key = local_private_key.get_public_key()
+        print("POSAuthorizer _local_private_key", self._local_private_key)
+        print("POSAuthorizer _local_public_key", self._local_public_key)
 
     async def get_token(self) -> AccessToken:
         # Uses the built in Hivemind ``AccessToken`` format
@@ -323,6 +325,7 @@ class POSAuthorizerLive(AuthorizerBase):
         """
         try:
             proof_of_stake = self.proof_of_stake(self._local_public_key)
+            print("init proof of stake", proof_of_stake)
             assert proof_of_stake is True, f"Invalid proof-of-stake for subnet ID {self.subnet_id}" 
         except Exception as e:
             logger.error(e, exc_info=True)
@@ -382,6 +385,7 @@ class POSAuthorizerLive(AuthorizerBase):
         # TODO: Add ``last_updated`` mapping to avoid over-checking POS
         try:
             proof_of_stake = self.proof_of_stake(client_public_key)
+            print("validate proof of stake", proof_of_stake)
 
             return proof_of_stake
         except Exception as e:
@@ -443,6 +447,7 @@ class POSAuthorizerLive(AuthorizerBase):
 
         return proof_of_stake
 
+
     def get_peer_id(self, public_key: Ed25519PublicKey) -> PeerID:
         encoded_public_key = crypto_pb2.PublicKey(
             key_type=crypto_pb2.Ed25519,
@@ -467,8 +472,9 @@ class POSAuthorizerLive(AuthorizerBase):
 
         if "result" not in result:
             return False
-        
-        if result["result"] not in result:
+                
+        # must be True or False
+        if result["result"] is not True and result["result"] is not False:
             return False
 
         return result["result"]
