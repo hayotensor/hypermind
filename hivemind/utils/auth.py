@@ -2,7 +2,7 @@ import asyncio
 import functools
 import secrets
 from abc import ABC, abstractmethod
-from datetime import datetime, time, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Dict, Optional
 
@@ -184,8 +184,6 @@ class POSAuthorizer(AuthorizerBase):
 
         self._local_private_key = local_private_key
         self._local_public_key = local_private_key.get_public_key()
-        print("POSAuthorizer _local_private_key", self._local_private_key)
-        print("POSAuthorizer _local_public_key", self._local_public_key)
 
     async def get_token(self) -> AccessToken:
         # Uses the built in Hivemind ``AccessToken`` format
@@ -325,9 +323,7 @@ class POSAuthorizerLive(AuthorizerBase):
         """
         try:
             proof_of_stake = self.proof_of_stake(self._local_public_key)
-            print("init proof of stake", proof_of_stake)
-
-            assert proof_of_stake, f"Invalid proof-of-stake for subnet ID {self.subnet_id}" 
+            assert proof_of_stake is True, f"Invalid proof-of-stake for subnet ID {self.subnet_id}" 
         except Exception as e:
             logger.error(e, exc_info=True)
 
@@ -386,7 +382,6 @@ class POSAuthorizerLive(AuthorizerBase):
         # TODO: Add ``last_updated`` mapping to avoid over-checking POS
         try:
             proof_of_stake = self.proof_of_stake(client_public_key)
-            print("validate proof of stake", proof_of_stake)
 
             return proof_of_stake
         except Exception as e:
@@ -424,7 +419,7 @@ class POSAuthorizerLive(AuthorizerBase):
         return True
 
     def add_or_update_peer_id(self, peer_id: PeerID):
-        timestamp = time.time()
+        timestamp = get_dht_time()
         self.peer_id_to_last_update[peer_id] = timestamp
 
     def get_peer_id_last_update(self, peer_id: PeerID) -> int:
@@ -437,7 +432,7 @@ class POSAuthorizerLive(AuthorizerBase):
         peer_id = self.get_peer_id(public_key)
         last_update = self.get_peer_id_last_update(peer_id)
 
-        timestamp = time.time()
+        timestamp = get_dht_time()
 
         if last_update != 0 and timestamp - last_update < self.pos_interim:
             return True
@@ -447,7 +442,6 @@ class POSAuthorizerLive(AuthorizerBase):
         proof_of_stake = self.is_staked(peer_id_vec)
 
         return proof_of_stake
-
 
     def get_peer_id(self, public_key: Ed25519PublicKey) -> PeerID:
         encoded_public_key = crypto_pb2.PublicKey(
@@ -465,12 +459,19 @@ class POSAuthorizerLive(AuthorizerBase):
         return [ord(char) for char in string]
 
     def is_staked(self, peer_id_vector) -> bool:
-        proof_of_stake = is_subnet_node_by_peer_id(
+        result = is_subnet_node_by_peer_id(
             self.interface,
             self.subnet_id,
             peer_id_vector
         )
-        return proof_of_stake
+
+        if "result" not in result:
+            return False
+        
+        if result["result"] not in result:
+            return False
+
+        return result["result"]
 
     @property
     def local_public_key(self) -> Ed25519PublicKey:

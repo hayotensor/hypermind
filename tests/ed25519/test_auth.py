@@ -1,7 +1,5 @@
-import base64
 from datetime import datetime, timedelta
 import hashlib
-import os
 import secrets
 from typing import Optional
 
@@ -13,13 +11,16 @@ from hivemind.proto.auth_pb2 import AccessToken
 from hivemind.dht.routing import DHTID
 from hivemind.p2p.p2p_daemon import P2P
 from hivemind.p2p.p2p_daemon_bindings.datastructures import PeerID
-from hivemind.utils.auth import AuthRole, AuthRPCWrapper, AuthorizedRequestBase, AuthorizedResponseBase, AuthorizerBase, TokenAuthorizerBase
+from hivemind.utils.auth import AuthRole, AuthRPCWrapper, AuthorizedRequestBase, AuthorizedResponseBase, AuthorizerBase, POSAuthorizerLive, TokenAuthorizerBase
 from hivemind.utils.crypto import Ed25519PrivateKey, Ed25519PublicKey
 from hivemind.utils.logging import get_logger
 from cryptography.hazmat.primitives import serialization
-from hivemind.proto import crypto_pb2, p2pd_pb2
+from hivemind.proto import crypto_pb2
 from cryptography.hazmat.primitives.asymmetric import ed25519
-from hivemind.utils.timed_storage import TimedStorage, get_dht_time
+from hivemind.utils.timed_storage import get_dht_time
+from substrateinterface import SubstrateInterface
+
+from test_dht_protocol_pos_auth import RPC_URL, run_register_subnet_node
 
 logger = get_logger(__name__)
 
@@ -190,16 +191,6 @@ class MockAuthorizer2(AuthorizerBase):
 
 @pytest.mark.asyncio
 async def test_write_ed25519_peer_id_pem_generated():
-    # test writing
-#     private_key = b"""-----BEGIN PRIVATE KEY-----
-# MC4CAQAwBQYDK2VwBCIEIH7sjlQYpBCnodJqPqYS2441L4wOOqyfLoc/SzTTC1h8
-# -----END PRIVATE KEY-----"""
-
-#     protobuf = crypto_pb2.PrivateKey(key_type=crypto_pb2.KeyType.Ed25519, data=private_key)
-
-    # with open('tests/ed25519/private_key_pem.key', "wb") as f:
-    #     f.write(protobuf.SerializeToString())
-
     with open('tests/ed25519/private_key_pem.key', "rb") as f:
         data = f.read()
         key_data = crypto_pb2.PrivateKey.FromString(data).data
@@ -210,33 +201,21 @@ async def test_write_ed25519_peer_id_pem_generated():
             encoding=serialization.Encoding.Raw,
             format=serialization.PublicFormat.Raw,
         )
-
-        print("test_write_ed25519_peer_id encoded_public_key:\n", encoded_public_key)
-        print("test_write_ed25519_peer_id encoded_public_key here2:\n", len(encoded_public_key))
-
         combined_key_bytes = private_key.private_bytes_raw() + encoded_public_key
 
         encoded_public_key = crypto_pb2.PublicKey(
             key_type=crypto_pb2.Ed25519,
             data=combined_key_bytes,
         ).SerializeToString()
-        print("test_write_ed25519_peer_id encoded_public_key:\n", encoded_public_key)
-        print("encoded_public_key pem len:\n", len(encoded_public_key))
 
         encoded_digest = multihash.encode(
             hashlib.sha256(encoded_public_key).digest(),
             multihash.coerce_code("sha2-256"),
         )
-        print("test_write_ed25519_peer_id encoded_digest:\n", encoded_digest)
-
-        print("test_write_ed25519_peer_id encoded_digest", PeerID(encoded_digest))
-
 
     p2p = await P2P.create(identity_path='tests/ed25519/private_key_generated.key')
 
     p2p_peer_id = p2p.peer_id
-
-    print("test_write_ed25519_peer_id p2p_peer_id", p2p_peer_id)
 
     await p2p.shutdown()
 
@@ -259,208 +238,36 @@ MC4CAQAwBQYDK2VwBCIEIH7sjlQYpBCnodJqPqYS2441L4wOOqyfLoc/SzTTC1h8
 
     protobuf = crypto_pb2.PrivateKey(key_type=crypto_pb2.KeyType.Ed25519, data=private_key)
 
-    print("test_write_ed25519_peer_id protobuf.SerializeToString():\n", protobuf.SerializeToString())
-
     with open('tests/ed25519/private_key_pem.key', "wb") as f:
         f.write(protobuf.SerializeToString())
 
     with open('tests/ed25519/private_key_pem.key', "rb") as f:
         data = f.read()
         key_data = crypto_pb2.PrivateKey.FromString(data).data
-        print("test_write_ed25519_peer_id key_data:\n", key_data)
 
         private_key = serialization.load_pem_private_key(key_data, password=None)
-        print("test_write_ed25519_peer_id private_key:\n", private_key)
 
         encoded_public_key = private_key.public_key().public_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo,
         )
-        print("test_write_ed25519_peer_id encoded_public_key:\n", encoded_public_key)
-        print("test_write_ed25519_peer_id encoded_public_key here2:\n", len(encoded_public_key))
 
         encoded_public_key = crypto_pb2.PublicKey(
             key_type=crypto_pb2.Ed25519,
             data=encoded_public_key,
         ).SerializeToString()
-        print("test_write_ed25519_peer_id encoded_public_key:\n", encoded_public_key)
-        print("encoded_public_key pem len:\n", len(encoded_public_key))
 
         encoded_digest = multihash.encode(
             hashlib.sha256(encoded_public_key).digest(),
             multihash.coerce_code("sha2-256"),
         )
-        print("test_write_ed25519_peer_id encoded_digest:\n", encoded_digest)
-
-        print("test_write_ed25519_peer_id encoded_digest", PeerID(encoded_digest))
 
 
     p2p = await P2P.create(identity_path='tests/ed25519/private_key_pem.key')
 
     p2p_peer_id = p2p.peer_id
 
-    print("test_write_ed25519_peer_id p2p_peer_id", p2p_peer_id)
-
     await p2p.shutdown()
-
-# pytest tests/ed25519/test_auth.py::test_write_ed25519_combined_peer_id_pem -rP
-
-# @pytest.mark.asyncio
-# async def test_write_ed25519_combined_peer_id_pem():
-#     # test writing
-#     private_key = b"""-----BEGIN PRIVATE KEY-----
-# MC4CAQAwBQYDK2VwBCIEIH7sjlQYpBCnodJqPqYS2441L4wOOqyfLoc/SzTTC1h8
-# -----END PRIVATE KEY-----"""
-
-#     # private_key = ed25519.Ed25519PrivateKey.generate()
-
-#     # private_key = private_key.private_bytes(
-#     #     encoding=serialization.Encoding.PEM,
-#     #     format=serialization.PrivateFormat.PKCS8,  # Standard format for private keys
-#     #     encryption_algorithm=serialization.NoEncryption()  # No password protection
-#     # )
-#     pem_private_key = serialization.load_pem_private_key(private_key, password=None)
-
-#     raw_private_key = pem_private_key.private_bytes(
-#         encoding=serialization.Encoding.Raw,  # DER format
-#         format=serialization.PrivateFormat.Raw,  # PKCS8 standard format
-#         encryption_algorithm=serialization.NoEncryption()  # No encryption
-#     )
-
-#     raw_public_key = pem_private_key.public_key().public_bytes(
-#         encoding=serialization.Encoding.Raw,
-#         format=serialization.PublicFormat.Raw,
-#     )
-
-#     combined_key_bytes = raw_private_key + raw_public_key
-#     protobuf = crypto_pb2.PrivateKey(key_type=crypto_pb2.KeyType.Ed25519, data=combined_key_bytes)
-
-#     # protobuf = crypto_pb2.PrivateKey(key_type=crypto_pb2.KeyType.Ed25519, data=private_key)
-
-#     with open('tests/ed25519/private_key_pem.key', "wb") as f:
-#         f.write(protobuf.SerializeToString())
-
-#     with open('tests/ed25519/private_key_pem.key', "rb") as f:
-#         data = f.read()
-#         key_data = crypto_pb2.PrivateKey.FromString(data).data
-#         print("test_write_ed25519_combined_peer_id_pem key_data:\n", key_data)
-
-#         private_key = serialization.load_pem_private_key(key_data, password=None)
-#         print("test_write_ed25519_combined_peer_id_pem private_key:\n", private_key)
-
-#         private_key_bytes = private_key.private_bytes(
-#             encoding=serialization.Encoding.Raw,  # No encoding for raw bytes
-#             format=serialization.PrivateFormat.Raw,    # No specific format for raw bytes
-#             encryption_algorithm=serialization.NoEncryption()
-#         )
-
-#         print("test_write_ed25519_peer_id private_key_bytes:\n", private_key_bytes)
-#         print("test_write_ed25519_peer_id private_key_bytes:\n", len(private_key_bytes))
-
-#         public_key_bytes = private_key.public_key().public_bytes(
-#             encoding=serialization.Encoding.Raw,
-#             format=serialization.PublicFormat.Raw,
-#         )
-#         print("test_write_ed25519_peer_id public_key_bytes:\n", public_key_bytes)
-#         print("test_write_ed25519_peer_id public_key_bytes:\n", len(public_key_bytes))
-
-#         combined_key_bytes = private_key_bytes + public_key_bytes
-#         print("test_write_ed25519_peer_id combined_key_bytes:\n", combined_key_bytes)
-#         print("test_write_ed25519_peer_id combined_key_bytes:\n", len(combined_key_bytes))
-
-#         encoded_public_key = crypto_pb2.PublicKey(
-#             key_type=crypto_pb2.Ed25519,
-#             data=combined_key_bytes,
-#         ).SerializeToString()
-#         print("test_write_ed25519_peer_id encoded_public_key:\n", encoded_public_key)
-#         print("encoded_public_key pem len:\n", len(encoded_public_key))
-
-#         encoded_digest = multihash.encode(
-#             hashlib.sha256(encoded_public_key).digest(),
-#             multihash.coerce_code("sha2-256"),
-#         )
-#         print("test_write_ed25519_peer_id encoded_digest:\n", encoded_digest)
-
-
-#         peer_id = PeerID(encoded_digest)
-#         print("test_write_ed25519_peer_id peer_id", peer_id)
-
-#         peer_id_to_bytes = peer_id.to_bytes()
-
-#         assert encoded_digest == peer_id_to_bytes
-
-
-#     p2p = await P2P.create(identity_path='private_key_pem.key')
-
-#     p2p_peer_id = p2p.peer_id
-
-#     print("test_write_ed25519_peer_id p2p_peer_id", p2p_peer_id)
-
-#     await p2p.shutdown()
-
-# @pytest.mark.asyncio
-# async def test_write_ed25519_peer_id_der():
-#     # test writing
-#     private_key = b"""-----BEGIN PRIVATE KEY-----
-# MC4CAQAwBQYDK2VwBCIEIH7sjlQYpBCnodJqPqYS2441L4wOOqyfLoc/SzTTC1h8
-# -----END PRIVATE KEY-----"""
-
-#     private_key = serialization.load_pem_private_key(
-#         private_key,  # Convert string to bytes
-#         password=None  # Provide the password if the key is encrypted
-#     )
-
-#     private_key = private_key.private_bytes(
-#         encoding=serialization.Encoding.DER,  # DER format
-#         format=serialization.PrivateFormat.PKCS8,  # PKCS8 standard format
-#         encryption_algorithm=serialization.NoEncryption()  # No encryption
-#     )
-
-#     protobuf = crypto_pb2.PrivateKey(key_type=crypto_pb2.KeyType.Ed25519, data=private_key)
-#     print("test_write_ed25519_peer_id protobuf:\n", protobuf)
-
-#     print("test_write_ed25519_peer_id protobuf.SerializeToString():\n", protobuf.SerializeToString())
-
-#     with open('tests/ed25519/private_key_2.pem', "wb") as f:
-#         f.write(protobuf.SerializeToString())
-
-#     with open('tests/ed25519/private_key_2.pem', "rb") as f:
-#         data = f.read()
-#         key_data = crypto_pb2.PrivateKey.FromString(data).data
-#         print("test_write_ed25519_peer_id key_data:\n", key_data)
-
-#         private_key = serialization.load_der_private_key(key_data, password=None)
-#         print("test_write_ed25519_peer_id private_key:\n", private_key)
-
-#         encoded_public_key = private_key.public_key().public_bytes(
-#             encoding=serialization.Encoding.DER,
-#             format=serialization.PublicFormat.SubjectPublicKeyInfo,
-#         )
-#         print("test_write_ed25519_peer_id encoded_public_key:\n", encoded_public_key)
-
-#         encoded_public_key = crypto_pb2.PublicKey(
-#             key_type=crypto_pb2.Ed25519,
-#             data=encoded_public_key,
-#         ).SerializeToString()
-#         print("test_write_ed25519_peer_id encoded_public_key:\n", encoded_public_key)
-#         print("encoded_public_key  dem len:\n", len(encoded_public_key))
-
-#         encoded_digest = multihash.encode(
-#             hashlib.sha256(encoded_public_key).digest(),
-#             multihash.coerce_code("sha2-256"),
-#         )
-#         print("test_write_ed25519_peer_id encoded_digest:\n", encoded_digest)
-
-#         print("test_write_ed25519_peer_id encoded_digest", PeerID(encoded_digest))
-
-
-#     p2p = await P2P.create(identity_path='tests/ed25519/private_key_2.pem')
-
-#     p2p_peer_id = p2p.peer_id
-
-#     print("test_write_ed25519_peer_id p2p_peer_id", p2p_peer_id)
-
-#     await p2p.shutdown()
 
 # pytest tests/ed25519/test_auth.py::test_write_ed25519_combined_peer_id_raw -rP
 
@@ -472,11 +279,8 @@ MC4CAQAwBQYDK2VwBCIEIH7sjlQYpBCnodJqPqYS2441L4wOOqyfLoc/SzTTC1h8
 -----END PRIVATE KEY-----"""
 
     pem_private_key = serialization.load_pem_private_key(private_key, password=None)
-    print("test_write_ed25519_combined_peer_id_raw pem_private_key:\n", pem_private_key)
 
     pem_private_key_raw = pem_private_key.private_bytes_raw()
-    print("test_write_ed25519_combined_peer_id_raw pem_private_key_raw:\n", pem_private_key_raw)
-    print("test_write_ed25519_combined_peer_id_raw pem_private_key_raw:\n", len(pem_private_key_raw))
 
     raw_private_key = pem_private_key.private_bytes(
         encoding=serialization.Encoding.Raw,  # DER format
@@ -507,30 +311,15 @@ MC4CAQAwBQYDK2VwBCIEIH7sjlQYpBCnodJqPqYS2441L4wOOqyfLoc/SzTTC1h8
             encoding=serialization.Encoding.Raw,
             format=serialization.PublicFormat.Raw,
         )
-        print("test_write_ed25519_combined_peer_id_raw public_key_bytes:\n", public_key_bytes)
-        print("test_write_ed25519_combined_peer_id_raw public_key_bytes:\n", len(public_key_bytes))
 
         assert raw_public_key == public_key_bytes
 
         combined_key_bytes = private_key.private_bytes_raw() + public_key_bytes
 
-        # combined_key_bytes_peer_id = PeerID(combined_key_bytes)
-        # print("test_write_ed25519_combined_peer_id_raw combined_key_bytes_peer_id", combined_key_bytes_peer_id)
-
-        # encoded_test = multihash.encode(
-        #     hashlib.sha256(combined_key_bytes).digest(),
-        #     multihash.coerce_code("sha2-256"),
-        # )
-        # test_peer_id = PeerID(encoded_test)
-        # print("test_write_ed25519_combined_peer_id_raw test_peer_id", test_peer_id)
-
         encoded_public_key = crypto_pb2.PublicKey(
             key_type=crypto_pb2.Ed25519,
             data=combined_key_bytes,
         ).SerializeToString()
-
-        # test_peer_id2 = PeerID(encoded_public_key)
-        # print("test_write_ed25519_combined_peer_id_raw test_peer_id2", test_peer_id2)
 
         encoded_digest = multihash.encode(
             hashlib.sha256(encoded_public_key).digest(),
@@ -538,7 +327,6 @@ MC4CAQAwBQYDK2VwBCIEIH7sjlQYpBCnodJqPqYS2441L4wOOqyfLoc/SzTTC1h8
         )
 
         peer_id = PeerID(encoded_digest)
-        print("test_write_ed25519_combined_peer_id_raw peer_id", peer_id)
 
         peer_id_to_bytes = peer_id.to_bytes()
 
@@ -548,10 +336,6 @@ MC4CAQAwBQYDK2VwBCIEIH7sjlQYpBCnodJqPqYS2441L4wOOqyfLoc/SzTTC1h8
     p2p = await P2P.create(identity_path='tests/ed25519/private_key_raw_pem.key')
 
     p2p_peer_id = p2p.peer_id
-
-    print("test_write_ed25519_combined_peer_id_raw p2p_peer_id", p2p_peer_id)
-    print("test_write_ed25519_combined_peer_id_raw p2p_peer_id", p2p_peer_id.to_base58())
-
 
     await p2p.shutdown()
 
@@ -571,18 +355,6 @@ MC4CAQAwBQYDK2VwBCIEIH7sjlQYpBCnodJqPqYS2441L4wOOqyfLoc/SzTTC1h8
     #     format=serialization.PublicFormat.SubjectPublicKeyInfo,
     # )
 
-    # encoded_public_key = crypto_pb2.PublicKey(
-    #     key_type=crypto_pb2.Ed25519,
-    #     data=encoded_public_key,
-    # ).SerializeToString()
-
-    # encoded_digest = multihash.encode(
-    #     hashlib.sha256(encoded_public_key).digest(),
-    #     multihash.coerce_code("sha2-256"),
-    # )
-
-    # print("test_write_ed25519_combined_peer_id_raw2 1111111: >", PeerID(encoded_digest))
-
     raw_private_key = pem_private_key.private_bytes(
         encoding=serialization.Encoding.Raw,  # DER format
         format=serialization.PrivateFormat.Raw,  # PKCS8 standard format
@@ -593,34 +365,24 @@ MC4CAQAwBQYDK2VwBCIEIH7sjlQYpBCnodJqPqYS2441L4wOOqyfLoc/SzTTC1h8
         encoding=serialization.Encoding.Raw,
         format=serialization.PublicFormat.Raw,
     )
-    print("test_write_ed25519_combined_peer_id_raw2 raw_public_key", raw_public_key)
 
     peer_id_raw_public_key = PeerID(raw_public_key)
-    print("test_write_ed25519_combined_peer_id_raw2 peer_id_raw_public_key", peer_id_raw_public_key)
+
     encoded_public_key_raw_public_key = crypto_pb2.PublicKey(
         key_type=crypto_pb2.Ed25519,
         data=raw_public_key,
     ).SerializeToString()
-    print("test_write_ed25519_combined_peer_id_raw2 encoded_public_key_raw_public_key:\n", encoded_public_key_raw_public_key)
+
     encoded_peer_id_raw_public_key = PeerID(encoded_public_key_raw_public_key)
-    print("test_write_ed25519_combined_peer_id_raw2 encoded_peer_id_raw_public_key:\n", encoded_peer_id_raw_public_key)
 
     encoded_digest_raw_public_key = multihash.encode(
         hashlib.sha256(encoded_public_key_raw_public_key).digest(),
         multihash.coerce_code("sha2-256"),
     )
-    print("test_write_ed25519_combined_peer_id_raw2 encoded_digest_raw_public_key", encoded_digest_raw_public_key)
 
     encoded_peer_id_raw_public_key2 = PeerID(encoded_digest_raw_public_key)
-    print("test_write_ed25519_combined_peer_id_raw2 encoded_peer_id_raw_public_key2:\n", encoded_peer_id_raw_public_key2)
 
     combined_key_bytes = (raw_private_key + raw_public_key)
-    # combined_key_bytes = raw_private_key
-    print("test_write_ed25519_combined_peer_id_raw2 combined_key_bytes:\n", combined_key_bytes)
-    print("test_write_ed25519_combined_peer_id_raw2 combined_key_bytes:\n", len(combined_key_bytes))
-    # combined_key_bytes_base_64 = base64.b64encode(combined_key_bytes)
-    # print("test_write_ed25519_combined_peer_id_raw2 combined_key_bytes_base_64:\n", combined_key_bytes_base_64)
-    # print("test_write_ed25519_combined_peer_id_raw2 combined_key_bytes_base_64:\n", len(combined_key_bytes_base_64))
 
     protobuf = crypto_pb2.PrivateKey(key_type=crypto_pb2.KeyType.Ed25519, data=combined_key_bytes)
 
@@ -629,49 +391,32 @@ MC4CAQAwBQYDK2VwBCIEIH7sjlQYpBCnodJqPqYS2441L4wOOqyfLoc/SzTTC1h8
 
     with open('tests/ed25519/private_key_raw_pem2.key', "rb") as f:
         data = f.read()
-        # key_data = crypto_pb2.PrivateKey(key_type=crypto_pb2.KeyType.Ed25519).FromString(data).data
         key_data = crypto_pb2.PrivateKey.FromString(data).data
-        print("test_write_ed25519_combined_peer_id_raw2 key_data:\n", key_data)
-        print("test_write_ed25519_combined_peer_id_raw2 key_data:\n", len(key_data))
 
         private_key = ed25519.Ed25519PrivateKey.from_private_bytes(key_data[:32])
-        # private_key = ed25519.Ed25519PrivateKey.from_private_bytes(key_data)
 
         assert raw_private_key == private_key.private_bytes_raw()
-        print("test_write_ed25519_combined_peer_id_raw2 private_key.private_bytes_raw():\n", private_key.private_bytes_raw())
-        print("test_write_ed25519_combined_peer_id_raw2 private_key.private_bytes_raw():\n", len(private_key.private_bytes_raw()))
 
         public_key_bytes = private_key.public_key().public_bytes(
             encoding=serialization.Encoding.Raw,
             format=serialization.PublicFormat.Raw,
         )
-        print("test_write_ed25519_combined_peer_id_raw2 public_key_bytes:\n", public_key_bytes)
-        print("test_write_ed25519_combined_peer_id_raw2 public_key_bytes:\n", len(public_key_bytes))
 
         assert raw_public_key == public_key_bytes
 
         combined_key_bytes = private_key.private_bytes_raw() + public_key_bytes
-        # combined_key_bytes = public_key_bytes
-        print("test_write_ed25519_combined_peer_id_raw2 combined_key_bytes:\n", combined_key_bytes)
 
         encoded_public_key = crypto_pb2.PublicKey(
             key_type=crypto_pb2.Ed25519,
             data=combined_key_bytes,
         ).SerializeToString()
-        print("test_write_ed25519_combined_peer_id_raw2 encoded_public_key:\n", encoded_public_key)
-
-        # encoded_public_key_sha256 = hashlib.sha256(encoded_public_key).digest()
-        # encoded_public_key_peer_id = PeerID(encoded_public_key_sha256)
-        # print("test_write_ed25519_combined_peer_id_raw2 encoded_public_key_peer_id", encoded_public_key_peer_id)
 
         encoded_digest = multihash.encode(
             hashlib.sha256(encoded_public_key).digest(),
             multihash.coerce_code("sha2-256"),
         )
-        print("test_write_ed25519_combined_peer_id_raw2 encoded_digest", encoded_digest)
 
         peer_id = PeerID(encoded_digest)
-        print("test_write_ed25519_combined_peer_id_raw2 peer_id", peer_id)
 
         peer_id_to_bytes = peer_id.to_bytes()
 
@@ -680,9 +425,6 @@ MC4CAQAwBQYDK2VwBCIEIH7sjlQYpBCnodJqPqYS2441L4wOOqyfLoc/SzTTC1h8
     p2p = await P2P.create(identity_path='tests/ed25519/private_key_raw_pem2.key')
 
     p2p_peer_id = p2p.peer_id
-
-    print("test_write_ed25519_combined_peer_id_raw2 p2p_peer_id", p2p_peer_id)
-
 
     await p2p.shutdown()
 
@@ -707,13 +449,11 @@ MC4CAQAwBQYDK2VwBCIEIH7sjlQYpBCnodJqPqYS2441L4wOOqyfLoc/SzTTC1h8
         encoding=serialization.Encoding.PEM,
         format=serialization.PublicFormat.SubjectPublicKeyInfo,
     )
-    print("encoded_public_key", encoded_public_key)
 
     raw_public_key = pem_private_key.public_key().public_bytes(
         encoding=serialization.Encoding.Raw,
         format=serialization.PublicFormat.Raw,
     )
-    print("raw_public_key", raw_public_key)
 
     combined_key_bytes = raw_private_key + raw_public_key
 
@@ -744,9 +484,6 @@ MC4CAQAwBQYDK2VwBCIEIH7sjlQYpBCnodJqPqYS2441L4wOOqyfLoc/SzTTC1h8
             data=public_key_bytes,
         ).SerializeToString()
 
-        print("encoded_public_key, :", encoded_public_key)
-        print("encoded_public_key, :", len(encoded_public_key))
-
         encoded_public_key = b"\x00$" + encoded_public_key
 
         peer_id = PeerID(encoded_public_key)
@@ -763,24 +500,10 @@ MC4CAQAwBQYDK2VwBCIEIH7sjlQYpBCnodJqPqYS2441L4wOOqyfLoc/SzTTC1h8
 
     await p2p.shutdown()
 
-# # pytest tests/ed25519/test_auth.py::test_write_ed25519_combined_peer_id_der -rP
-
-# @pytest.mark.asyncio
-# async def test_write_ed25519_combined_peer_id_der():
-#     # test writing
-#     private_key = b"""-----BEGIN PRIVATE KEY-----
-# MC4CAQAwBQYDK2VwBCIEIH7sjlQYpBCnodJqPqYS2441L4wOOqyfLoc/SzTTC1h8
-# -----END PRIVATE KEY-----"""
-
-
-#     PrivateKeyImpl.from_seed
-
 @pytest.mark.asyncio
 async def test_valid_request_and_response():
     client_authorizer = MockAuthorizer(Ed25519PrivateKey())
     service_authorizer = MockAuthorizer(Ed25519PrivateKey())
-
-    print("service_authorizer.local_public_key", service_authorizer.local_public_key.to_bytes())
 
     request = dht_pb2.PingRequest()
     request.peer.node_id = b"ping"
@@ -870,10 +593,10 @@ async def test_auth_rpc_wrapper():
     assert response.peer.node_id == b"pong"
     assert response.auth.service_access_token.username == "bob"
 
-# pytest tests/ed25519/test_auth.py::test_valid_request_and_response_2 -rP
+# pytest tests/ed25519/test_auth.py::test_valid_request_and_response_with_keys -rP
 
 @pytest.mark.asyncio
-async def test_valid_request_and_response_2():
+async def test_valid_request_and_response_with_keys():
     test_rsa1 = Ed25519PrivateKey()
     test_rsa2 = Ed25519PrivateKey()
     client_authorizer = MockAuthorizer2(Ed25519PrivateKey())
@@ -882,20 +605,109 @@ async def test_valid_request_and_response_2():
 
     request = dht_pb2.PingRequest()
     client_node_id = DHTID.generate()
-    print("client_node_id", client_node_id)
-    print("client_node_id", DHTID.from_bytes(client_node_id.to_bytes()))
+
     request.peer.node_id = client_node_id.to_bytes()
-    # request.auth.service_public_key = client_authorizer.local_public_key.to_bytes()
+
     request.auth.client_access_token.public_key = client_authorizer.local_public_key.to_bytes()
-    print("test_valid_request_and_response_2 request", request)
+
     await client_authorizer.sign_request(request, service_authorizer.local_public_key)
     assert await service_authorizer.validate_request(request)
 
     response = dht_pb2.PingResponse()
     service_node_id = DHTID.generate()
-    print("service_node_id", service_node_id)
-    print("service_node_id", service_node_id.to_bytes())
-    print("service_node_id", DHTID.from_bytes(service_node_id.to_bytes()))
+
+    response.peer.node_id = service_node_id.to_bytes()
+
+    await service_authorizer.sign_response(response, request)
+    assert await client_authorizer.validate_response(response, request)
+
+# pytest tests/ed25519/test_auth.py::test_valid_request_and_response_with_pos_and_keys -rP
+
+@pytest.mark.asyncio
+async def test_valid_request_and_response_with_pos_and_keys():
+    #client
+    ed25519_private_key_client = Ed25519PrivateKey()
+    client_raw_pubkey = ed25519_private_key_client.get_public_key().to_raw_bytes()
+    client_encoded_public_key = crypto_pb2.PublicKey(
+        key_type=crypto_pb2.Ed25519,
+        data=client_raw_pubkey,
+    ).SerializeToString()
+    client_encoded_digest = b"\x00$" + client_encoded_public_key
+    client_peer_id = PeerID(client_encoded_digest)
+    run_register_subnet_node(1, client_peer_id.to_base58())
+    client_authorizer = POSAuthorizerLive(ed25519_private_key_client, 1, SubstrateInterface(url=RPC_URL))
+
+    #service
+    ed25519_private_key_service = Ed25519PrivateKey()
+    service_raw_pubkey = ed25519_private_key_service.get_public_key().to_raw_bytes()
+    service_encoded_public_key = crypto_pb2.PublicKey(
+        key_type=crypto_pb2.Ed25519,
+        data=service_raw_pubkey,
+    ).SerializeToString()
+    service_encoded_digest = b"\x00$" + service_encoded_public_key
+    service_peer_id = PeerID(service_encoded_digest)
+    run_register_subnet_node(2, service_peer_id.to_base58())
+    service_authorizer = POSAuthorizerLive(ed25519_private_key_service, 1, SubstrateInterface(url=RPC_URL))
+
+    request = dht_pb2.PingRequest()
+    client_node_id = DHTID.generate()
+
+    request.peer.node_id = client_node_id.to_bytes()
+
+    request.auth.client_access_token.public_key = client_authorizer.local_public_key.to_bytes()
+
+    await client_authorizer.sign_request(request, service_authorizer.local_public_key)
+    assert await service_authorizer.validate_request(request)
+
+    response = dht_pb2.PingResponse()
+    service_node_id = DHTID.generate()
+
+    response.peer.node_id = service_node_id.to_bytes()
+
+    await service_authorizer.sign_response(response, request)
+    assert await client_authorizer.validate_response(response, request)
+
+# pytest tests/ed25519/test_auth.py::test_valid_request_and_response_with_pos_and_keys_invalid -rP
+
+@pytest.mark.asyncio
+async def test_valid_request_and_response_with_pos_and_keys_invalid():
+    #client
+    ed25519_private_key_client = Ed25519PrivateKey()
+    client_raw_pubkey = ed25519_private_key_client.get_public_key().to_raw_bytes()
+    client_encoded_public_key = crypto_pb2.PublicKey(
+        key_type=crypto_pb2.Ed25519,
+        data=client_raw_pubkey,
+    ).SerializeToString()
+    client_encoded_digest = b"\x00$" + client_encoded_public_key
+    client_peer_id = PeerID(client_encoded_digest)
+    # run_register_subnet_node(1, client_peer_id.to_base58())
+    client_authorizer = POSAuthorizerLive(ed25519_private_key_client, 1, SubstrateInterface(url=RPC_URL))
+
+    #service
+    ed25519_private_key_service = Ed25519PrivateKey()
+    service_raw_pubkey = ed25519_private_key_service.get_public_key().to_raw_bytes()
+    service_encoded_public_key = crypto_pb2.PublicKey(
+        key_type=crypto_pb2.Ed25519,
+        data=service_raw_pubkey,
+    ).SerializeToString()
+    service_encoded_digest = b"\x00$" + service_encoded_public_key
+    service_peer_id = PeerID(service_encoded_digest)
+    run_register_subnet_node(2, service_peer_id.to_base58())
+    service_authorizer = POSAuthorizerLive(ed25519_private_key_service, 1, SubstrateInterface(url=RPC_URL))
+
+    request = dht_pb2.PingRequest()
+    client_node_id = DHTID.generate()
+
+    request.peer.node_id = client_node_id.to_bytes()
+
+    request.auth.client_access_token.public_key = client_authorizer.local_public_key.to_bytes()
+
+    await client_authorizer.sign_request(request, service_authorizer.local_public_key)
+    assert not await service_authorizer.validate_request(request)
+
+    response = dht_pb2.PingResponse()
+    service_node_id = DHTID.generate()
+
     response.peer.node_id = service_node_id.to_bytes()
 
     await service_authorizer.sign_response(response, request)
@@ -978,7 +790,7 @@ MC4CAQAwBQYDK2VwBCIEIGd73zfxu+jH4XPc4BWs9FG/38CDEw59RMlkw13W+e2f
     request.auth.client_access_token.public_key = client_authorizer.local_public_key.to_bytes()
     # wrong public key
     await client_authorizer.sign_request(request, fake_service_authorizer.local_public_key)
-    print("test_valid_request_and_response_invalid request", request)
+
     assert not await service_authorizer.validate_request(request)
 
     response = dht_pb2.PingResponse()
@@ -994,7 +806,7 @@ MC4CAQAwBQYDK2VwBCIEIGd73zfxu+jH4XPc4BWs9FG/38CDEw59RMlkw13W+e2f
     request.auth.client_access_token.public_key = client_authorizer.local_public_key.to_bytes()
     # wrong public key
     await client_authorizer.sign_request(request, service_authorizer.local_public_key)
-    print("test_valid_request_and_response_invalid request", request)
+
     assert await service_authorizer.validate_request(request)
 
     response = dht_pb2.PingResponse()
@@ -1033,6 +845,4 @@ async def test_get_public_key():
         data = f.read()
         key_data = crypto_pb2.PrivateKey.FromString(data).data
         raw_private_key = ed25519.Ed25519PrivateKey.from_private_bytes(key_data[:32])
-        print("raw_private_key public_key", raw_private_key.public_key())
         private_key = Ed25519PrivateKey(private_key=raw_private_key)
-        print("private_key get_public_key", private_key.get_public_key())
