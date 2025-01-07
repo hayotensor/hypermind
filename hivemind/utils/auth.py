@@ -184,8 +184,6 @@ class POSAuthorizer(AuthorizerBase):
 
         self._local_private_key = local_private_key
         self._local_public_key = local_private_key.get_public_key()
-        print("POSAuthorizer _local_private_key", self._local_private_key)
-        print("POSAuthorizer _local_public_key", self._local_public_key)
 
     async def get_token(self) -> AccessToken:
         # Uses the built in Hivemind ``AccessToken`` format
@@ -325,7 +323,6 @@ class POSAuthorizerLive(AuthorizerBase):
         """
         try:
             proof_of_stake = self.proof_of_stake(self._local_public_key)
-            print("init proof of stake", proof_of_stake)
             assert proof_of_stake is True, f"Invalid proof-of-stake for subnet ID {self.subnet_id}" 
         except Exception as e:
             logger.error(e, exc_info=True)
@@ -385,14 +382,10 @@ class POSAuthorizerLive(AuthorizerBase):
         # TODO: Add ``last_updated`` mapping to avoid over-checking POS
         try:
             proof_of_stake = self.proof_of_stake(client_public_key)
-            print("validate proof of stake", proof_of_stake)
-
             return proof_of_stake
         except Exception as e:
             logger.debug("Proof of stake failed", exc_info=True)
             return False
-
-        return True
 
     async def sign_response(self, response: AuthorizedResponseBase, request: AuthorizedRequestBase) -> None:
         auth = response.auth
