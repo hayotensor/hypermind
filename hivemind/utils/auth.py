@@ -319,13 +319,20 @@ class POSAuthorizerLive(AuthorizerBase):
         self.pos_interim = 60
 
         """
-        Ensure self is staked
+        REMOVE THIS 
+        Until all all DHT requests are passed through from the originating DHT initialization.
+        Otherwise, when entering the DHT, this will always get called with no way to stop it
+        because it's a fresh class
         """
-        try:
-            proof_of_stake = self.proof_of_stake(self._local_public_key)
-            assert proof_of_stake is True, f"Invalid proof-of-stake for subnet ID {self.subnet_id}" 
-        except Exception as e:
-            logger.error(e, exc_info=True)
+        # 
+        # """
+        # Ensure self is staked
+        # """
+        # try:
+        #     proof_of_stake = self.proof_of_stake(self._local_public_key)
+        #     assert proof_of_stake is True, f"Invalid proof-of-stake for subnet ID {self.subnet_id}" 
+        # except Exception as e:
+        #     logger.error(e, exc_info=True)
 
 
     async def get_token(self) -> AccessToken:
