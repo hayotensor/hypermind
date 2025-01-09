@@ -320,7 +320,7 @@ class POSAuthorizerLive(AuthorizerBase):
 
         """
         REMOVE THIS 
-        Until all all DHT requests are passed through from the originating DHT initialization.
+        Until all DHT requests are passed through from the originating DHT initialization.
         Otherwise, when entering the DHT, this will always get called with no way to stop it
         because it's a fresh class
         """
@@ -386,7 +386,7 @@ class POSAuthorizerLive(AuthorizerBase):
             logger.debug("Request is generated for a peer with another public key")
             return False
 
-        # TODO: Add ``last_updated`` mapping to avoid over-checking POS
+        # Verify proof of stake
         try:
             proof_of_stake = self.proof_of_stake(client_public_key)
             return proof_of_stake
@@ -446,7 +446,6 @@ class POSAuthorizerLive(AuthorizerBase):
         proof_of_stake = self.is_staked(peer_id_vec)
 
         return proof_of_stake
-
 
     def get_peer_id(self, public_key: Ed25519PublicKey) -> PeerID:
         encoded_public_key = crypto_pb2.PublicKey(
