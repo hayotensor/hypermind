@@ -313,27 +313,9 @@ class POSAuthorizerLive(AuthorizerBase):
         self._local_private_key = local_private_key
         self._local_public_key = local_private_key.get_public_key()
         self.subnet_id = subnet_id
-        self.interface = interface
-
         self.peer_id_to_last_update: Dict[PeerID, int] = dict()
         self.pos_interim = 60
-
-        """
-        REMOVE THIS 
-        Until all DHT requests are passed through from the originating DHT initialization.
-        Otherwise, when entering the DHT, this will always get called with no way to stop it
-        because it's a fresh class
-        """
-        # 
-        # """
-        # Ensure self is staked
-        # """
-        # try:
-        #     proof_of_stake = self.proof_of_stake(self._local_public_key)
-        #     assert proof_of_stake is True, f"Invalid proof-of-stake for subnet ID {self.subnet_id}" 
-        # except Exception as e:
-        #     logger.error(e, exc_info=True)
-
+        self.interface = interface
 
     async def get_token(self) -> AccessToken:
         # Uses the built in Hivemind ``AccessToken`` format
@@ -388,12 +370,12 @@ class POSAuthorizerLive(AuthorizerBase):
 
         # Verify proof of stake
         try:
-            print("validate_request check pos")
             proof_of_stake = self.proof_of_stake(client_public_key)
             return proof_of_stake
         except Exception as e:
-            logger.debug("Proof of stake failed", exc_info=True)
-            return False
+            logger.debug("Proof of stake failed, validate request", e, exc_info=True)
+
+        return False
 
     async def sign_response(self, response: AuthorizedResponseBase, request: AuthorizedRequestBase) -> None:
         auth = response.auth
@@ -422,19 +404,15 @@ class POSAuthorizerLive(AuthorizerBase):
             return False
 
         try:
-            print("validate_response check pos")
             proof_of_stake = self.proof_of_stake(service_public_key)
             return proof_of_stake
         except Exception as e:
-            logger.debug("Proof of stake failed", exc_info=True)
-            return False
+            logger.debug("Proof of stake failed, validate response", e, exc_info=True)
 
-        return True
+        return False
 
     def add_or_update_peer_id(self, peer_id: PeerID):
         timestamp = get_dht_time()
-        print("add_or_update_peer_id timestamp", peer_id, timestamp)
-
         self.peer_id_to_last_update[peer_id] = timestamp
 
     def get_peer_id_last_update(self, peer_id: PeerID) -> int:
@@ -446,17 +424,15 @@ class POSAuthorizerLive(AuthorizerBase):
 
     def proof_of_stake(self, public_key: Ed25519PublicKey) -> bool:        
         peer_id: PeerID = self.get_peer_id(public_key)
-        print("proof_of_stake peer_id", peer_id)
+
+        # redundant but just in case if getting peer_id fails
+        # the typings should make this never happen
         if peer_id is None:
             return False
         
         last_update = self.get_peer_id_last_update(peer_id)
 
         timestamp = get_dht_time()
-
-        print("proof_of_stake last_update", last_update)
-        print("proof_of_stake timestamp", timestamp)
-        print("proof_of_stake timestamp - last_update", timestamp - last_update)
 
         if last_update != 0 and timestamp - last_update < self.pos_interim:
             return True
@@ -486,6 +462,7 @@ class POSAuthorizerLive(AuthorizerBase):
             return None
     
     def to_vec_u8(self, string):
+        """Get peer_id in vec<u8> for blockchain"""
         return [ord(char) for char in string]
 
     def is_staked(self, peer_id_vector) -> bool:
