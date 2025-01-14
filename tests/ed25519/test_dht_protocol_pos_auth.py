@@ -157,6 +157,7 @@ def run_protocol_listener(
 
         visible_maddrs = loop.run_until_complete(p2p.get_visible_maddrs())
 
+        pos_auth = POSAuthorizerLive(ed25519_private_key, 1, SubstrateInterface(url=RPC_URL))
         protocol = loop.run_until_complete(
             DHTProtocol.create(
                 p2p, 
@@ -165,17 +166,22 @@ def run_protocol_listener(
                 depth_modulo=5, 
                 num_replicas=3, 
                 wait_timeout=5,
-                authorizer=POSAuthorizerLive(ed25519_private_key, 1, SubstrateInterface(url=RPC_URL))
+                authorizer=pos_auth
                 # authorizer=POSAuthorizer(private_key)
             )
         )
 
-        logger.info(f"Started peer id={protocol.node_id} visible_maddrs={visible_maddrs}")
+        logger.info(f"Started node id={protocol.node_id}, peer id={p2p.peer_id} visible_maddrs={visible_maddrs}")
 
         for peer_id in maddrs_to_peer_ids(initial_peers):
+            print("maddrs_to_peer_ids peer_id", peer_id)
             loop.run_until_complete(protocol.call_ping(peer_id))
 
         maddr_conn.send((p2p.peer_id, visible_maddrs))
+
+        for peer_id in maddrs_to_peer_ids(initial_peers):
+            timestamp = pos_auth.peer_id_to_last_update.get(peer_id)
+            print("maddrs_to_peer_ids peer_id timestamp", timestamp)
 
         async def shutdown():
             await p2p.shutdown()
@@ -260,7 +266,8 @@ async def test_dht_protocol_pos_auth():
             p2p = await P2P.create(initial_peers=peer1_maddrs, identity_path=f"tests/private_key_client-{client_mode}.key")
 
             # assert p2p.peer_id == peer_id
-
+            
+            pos_auth = POSAuthorizerLive(ed25519_private_key, 1, SubstrateInterface(url=RPC_URL))
             protocol = await DHTProtocol.create(
                 p2p, 
                 node_id, 
@@ -269,7 +276,7 @@ async def test_dht_protocol_pos_auth():
                 wait_timeout=5, 
                 num_replicas=3, 
                 client_mode=client_mode,
-                authorizer=POSAuthorizerLive(ed25519_private_key, 1, SubstrateInterface(url=RPC_URL))
+                authorizer=pos_auth
                 # authorizer=POSAuthorizer(ed25519_private_key)
             )
             logger.info(f"Self id={protocol.node_id}")
@@ -279,6 +286,20 @@ async def test_dht_protocol_pos_auth():
             print(f"peer-{client_mode} public key is: ", public_key)
 
             assert peer1_node_id == await protocol.call_ping(peer1_id)
+
+            pos_auth_staked = pos_auth.proof_of_stake(ed25519_public_key)
+            print("pos_auth_staked", pos_auth_staked)
+            assert pos_auth_staked is True
+
+
+            timestamp = pos_auth.peer_id_to_last_update.get(peer1_id)
+            print("peer1_id timestamp", timestamp)
+
+
+            # assert peer2_node_id == await protocol.call_ping(peer2_id)
+
+            # timestamp = pos_auth.peer_id_to_last_update.get(peer2_id)
+            # print("peer2_id timestamp", timestamp)
 
             if not client_mode:
                 await p2p.shutdown()
@@ -372,6 +393,91 @@ async def test_dht_protocol_pos_auth_fail():
 
 @pytest.mark.asyncio
 async def test_pos_authorizer():
+    print("run_pos_authorizer")
+    private_key = ed25519.Ed25519PrivateKey.generate()
+
+    raw_private_key = private_key.private_bytes(
+        encoding=serialization.Encoding.Raw,  # DER format
+        format=serialization.PrivateFormat.Raw,  # PKCS8 standard format
+        encryption_algorithm=serialization.NoEncryption()  # No encryption
+    )
+
+    public_key = private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw,
+    )
+
+    combined_key_bytes = raw_private_key + public_key
+
+    protobuf = crypto_pb2.PrivateKey(key_type=crypto_pb2.KeyType.Ed25519, data=combined_key_bytes)
+
+    with open(f"tests/ed25519/private_key_pos.key", "wb") as f:
+        f.write(protobuf.SerializeToString())
+
+    with open(f"tests/ed25519/private_key_pos.key", "rb") as f:
+        data = f.read()
+        key_data = crypto_pb2.PrivateKey.FromString(data).data
+
+        private_key = ed25519.Ed25519PrivateKey.from_private_bytes(key_data[:32])
+        ed25519_private_key = Ed25519PrivateKey(private_key=private_key)
+        ed25519_public_key = ed25519_private_key.get_public_key()
+        
+        public_key = private_key.public_key().public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw,
+        )
+
+        encoded_public_key = crypto_pb2.PublicKey(
+            key_type=crypto_pb2.Ed25519,
+            data=public_key,
+        ).SerializeToString()
+
+        encoded_digest = b"\x00$" + encoded_public_key
+
+        peer_id = PeerID(encoded_digest)
+
+        # POSAuthorizer(ed25519_private_key)
+
+    keypair = Keypair.create_from_uri(f"//{1}")
+    try:
+        receipt = register_subnet_node(
+            SubstrateInterface(url=RPC_URL),
+            keypair,
+            1,
+            peer_id.to_base58(),
+            int(1000 * 1e18),
+            None,
+            None,
+            None
+        )
+        assert receipt.is_success
+    except Exception as e:
+        print(f"Error running register_subnet_node: {e}")
+
+    print("peer_id", peer_id.to_base58())
+    peer_id_vec = [ord(char) for char in peer_id.to_base58()]
+
+    print(peer_id_vec)
+
+    proof_of_stake = is_subnet_node_by_peer_id(
+        SubstrateInterface(url=RPC_URL),
+        1,
+        peer_id_vec
+    )
+
+    print("result" in proof_of_stake)
+    assert proof_of_stake['result'] is True
+
+    pos_auth = POSAuthorizerLive(ed25519_private_key, 1, SubstrateInterface(url=RPC_URL))
+
+    pos_auth_staked = pos_auth.proof_of_stake(ed25519_public_key)
+    assert pos_auth_staked is True
+
+    # timestamp = pos_auth.peer_id_to_last_update(ed25519_public_key)
+    # assert pos_auth_staked is True
+
+@pytest.mark.asyncio
+async def test_pos_authorizer_del_peer_map():
     print("run_pos_authorizer")
     private_key = ed25519.Ed25519PrivateKey.generate()
 

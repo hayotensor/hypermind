@@ -65,6 +65,8 @@ To install hivemind from source, simply run the following:
 ```
 git clone https://github.com/learning-at-home/hivemind.git
 cd hivemind
+python -m venv .venv
+source .venv/bin/activate
 pip install .
 ```
 

@@ -262,7 +262,7 @@ class POSAuthorizer(AuthorizerBase):
             logger.debug("Proof of stake failed", exc_info=True)
             return False
 
-        return True
+        return False
 
     async def sign_response(self, response: AuthorizedResponseBase, request: AuthorizedRequestBase) -> None:
         auth = response.auth
@@ -388,6 +388,7 @@ class POSAuthorizerLive(AuthorizerBase):
 
         # Verify proof of stake
         try:
+            print("validate_request check pos")
             proof_of_stake = self.proof_of_stake(client_public_key)
             return proof_of_stake
         except Exception as e:
@@ -420,23 +421,42 @@ class POSAuthorizerLive(AuthorizerBase):
             logger.debug("Response is generated for another request")
             return False
 
+        try:
+            print("validate_response check pos")
+            proof_of_stake = self.proof_of_stake(service_public_key)
+            return proof_of_stake
+        except Exception as e:
+            logger.debug("Proof of stake failed", exc_info=True)
+            return False
+
         return True
 
     def add_or_update_peer_id(self, peer_id: PeerID):
         timestamp = get_dht_time()
+        print("add_or_update_peer_id timestamp", peer_id, timestamp)
+
         self.peer_id_to_last_update[peer_id] = timestamp
 
     def get_peer_id_last_update(self, peer_id: PeerID) -> int:
-        if peer_id not in self.peer_id_to_last_update:
+        last_update = self.peer_id_to_last_update.get(peer_id)
+        if last_update is None:
             return 0
         
-        return self.peer_id_to_last_update[peer_id]
+        return last_update
 
     def proof_of_stake(self, public_key: Ed25519PublicKey) -> bool:        
-        peer_id = self.get_peer_id(public_key)
+        peer_id: PeerID = self.get_peer_id(public_key)
+        print("proof_of_stake peer_id", peer_id)
+        if peer_id is None:
+            return False
+        
         last_update = self.get_peer_id_last_update(peer_id)
 
         timestamp = get_dht_time()
+
+        print("proof_of_stake last_update", last_update)
+        print("proof_of_stake timestamp", timestamp)
+        print("proof_of_stake timestamp - last_update", timestamp - last_update)
 
         if last_update != 0 and timestamp - last_update < self.pos_interim:
             return True
@@ -445,19 +465,25 @@ class POSAuthorizerLive(AuthorizerBase):
         peer_id_vec = self.to_vec_u8(peer_id.to_base58())
         proof_of_stake = self.is_staked(peer_id_vec)
 
+        if proof_of_stake is False:
+            self.peer_id_to_last_update.pop(peer_id, None)
+
         return proof_of_stake
 
-    def get_peer_id(self, public_key: Ed25519PublicKey) -> PeerID:
-        encoded_public_key = crypto_pb2.PublicKey(
-            key_type=crypto_pb2.Ed25519,
-            data=public_key.to_raw_bytes(),
-        ).SerializeToString()
+    def get_peer_id(self, public_key: Ed25519PublicKey) -> Optional[PeerID]:
+        try:
+            encoded_public_key = crypto_pb2.PublicKey(
+                key_type=crypto_pb2.Ed25519,
+                data=public_key.to_raw_bytes(),
+            ).SerializeToString()
 
-        encoded_public_key = b"\x00$" + encoded_public_key
+            encoded_public_key = b"\x00$" + encoded_public_key
 
-        peer_id = PeerID(encoded_public_key)
+            peer_id = PeerID(encoded_public_key)
 
-        return peer_id
+            return peer_id
+        except:
+            return None
     
     def to_vec_u8(self, string):
         return [ord(char) for char in string]
