@@ -25,7 +25,7 @@ from substrateinterface import SubstrateInterface, Keypair, ExtrinsicReceipt
 from substrateinterface.exceptions import SubstrateRequestException
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from hivemind.utils.substrate import is_subnet_node_by_peer_id
+from hivemind.substrate.chain_functions import is_subnet_node_by_peer_id
 
 logger = get_logger(__name__)
 

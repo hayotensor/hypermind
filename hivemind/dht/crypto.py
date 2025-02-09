@@ -39,24 +39,38 @@ class Ed25519SignatureValidator(RecordValidatorBase):
         return self._local_public_key
 
     def validate(self, record: DHTRecord) -> bool:
+        print("validate record", record)
+        print("validate record key", record.key)
+
+        try:
+            print("validate record key decode", type(record.key))
+        except:
+            pass
+
         public_keys = self._PUBLIC_KEY_RE.findall(record.key)
+        print("validate public_keys", public_keys)
         if record.subkey is not None:
             public_keys += self._PUBLIC_KEY_RE.findall(record.subkey)
+            print("validate subkey is not None public_keys", public_keys)
         if not public_keys:
+            print("validate if not public_keys")
             return True  # The record is not protected with a public key
 
         if len(set(public_keys)) > 1:
             logger.debug(f"Key and subkey can't contain different public keys in {record}")
             return False
         public_key = Ed25519PublicKey.from_bytes(public_keys[0])
+        print("validate public_key", public_key)
 
         signatures = self._SIGNATURE_RE.findall(record.value)
+        print("validate signatures", signatures)
         if len(signatures) != 1:
             logger.debug(f"Record should have exactly one signature in {record}")
             return False
         signature = signatures[0]
 
         stripped_record = dataclasses.replace(record, value=self.strip_value(record))
+        print("validate stripped_record", stripped_record)
         if not public_key.verify(self._serialize_record(stripped_record), signature):
             logger.debug(f"Signature is invalid in {record}")
             return False

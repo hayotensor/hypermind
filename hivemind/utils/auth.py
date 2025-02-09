@@ -10,7 +10,7 @@ from hivemind.proto.auth_pb2 import AccessToken, RequestAuthInfo, ResponseAuthIn
 from hivemind.p2p.p2p_daemon_bindings.datastructures import PeerID
 from hivemind.utils.crypto import Ed25519PrivateKey, Ed25519PublicKey
 from hivemind.utils.logging import get_logger
-from hivemind.utils.substrate import is_subnet_node_by_peer_id
+from hivemind.substrate.chain_functions import is_subnet_node_by_peer_id
 from hivemind.utils.timed_storage import TimedStorage, get_dht_time
 from hivemind.proto import crypto_pb2
 
@@ -314,6 +314,7 @@ class POSAuthorizerLive(AuthorizerBase):
         self._local_public_key = local_private_key.get_public_key()
         self.subnet_id = subnet_id
         self.peer_id_to_last_update: Dict[PeerID, int] = dict()
+        self.peer_id_to_failed_pos_last_update: Dict[PeerID, int] = dict()
         self.pos_interim = 60
         self.interface = interface
 
@@ -419,31 +420,43 @@ class POSAuthorizerLive(AuthorizerBase):
         last_update = self.peer_id_to_last_update.get(peer_id)
         if last_update is None:
             return 0
-        
         return last_update
+
+    def should_skip_authentication(self, peer_id: PeerID) -> bool:
+        last_update = self.peer_id_to_failed_pos_last_update.get(peer_id)
+        if last_update is None:
+            return False
+
+        timestamp = get_dht_time()
+
+        # 1100 - 1000 (=100) < 60
+        if last_update is not None and timestamp - last_update < self.pos_interim:
+            return True
 
     def proof_of_stake(self, public_key: Ed25519PublicKey) -> bool:        
         peer_id: PeerID = self.get_peer_id(public_key)
-
         # redundant but just in case if getting peer_id fails
         # the typings should make this never happen
         if peer_id is None:
             return False
         
         last_update = self.get_peer_id_last_update(peer_id)
-
         timestamp = get_dht_time()
 
         if last_update != 0 and timestamp - last_update < self.pos_interim:
             return True
 
-        self.add_or_update_peer_id(peer_id)
         peer_id_vec = self.to_vec_u8(peer_id.to_base58())
         proof_of_stake = self.is_staked(peer_id_vec)
 
         if proof_of_stake is False:
             self.peer_id_to_last_update.pop(peer_id, None)
+            self.peer_id_to_failed_pos_last_update[peer_id] = timestamp
+            return False
+        else:
+            self.peer_id_to_failed_pos_last_update.pop(peer_id, None)
 
+        self.add_or_update_peer_id(peer_id)
         return proof_of_stake
 
     def get_peer_id(self, public_key: Ed25519PublicKey) -> Optional[PeerID]:
