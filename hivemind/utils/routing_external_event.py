@@ -1,7 +1,15 @@
+"""An external events class that inherits a routing table
+
+Can be used to add/remove peers from the routing table based on external events, such as events that come from
+an the Hypertensor blockchain
+
+"""
+
 import asyncio
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
+
 from hivemind.dht.routing import RoutingTable
 from hivemind.p2p.p2p_daemon_bindings.datastructures import PeerID
 from hivemind.utils.auth import POSAuthorizerLive
@@ -11,6 +19,7 @@ from hivemind.utils.timed_storage import get_dht_time
 from hivemind.proto import crypto_pb2
 
 from substrateinterface import SubstrateInterface
+from scalecodec.base import ScaleBytes, RuntimeConfiguration
 
 logger = get_logger(__name__)
 
@@ -58,15 +67,43 @@ class POSExternalEventBase(RoutingExternalEventBase):
                 )
 
                 # skip if no results
-                if "result" not in result:
-                    continue
+                if "result" in result:
+                    result = result["result"]
+                    data = self.decode_data(result)
 
-                result = result["result"]
+                    if data:
+                        self.handle_pos(data)
 
             await asyncio.sleep(self.pos_interim)
 
+    def handle_pos(self, data):
+        """
+        Handle of removal of peers from routing table if not POS
+
+        Args:
+            data (tuple): BTreeMap<Vec<u8>,bool> as decoded tuple (peer_id, bool).
+        """
+        # Get POS nodes only
+        pos = {peer_id: flag for peer_id, flag in data}
+
+        for peer_id, dht_id in self.routing_table.peer_id_to_uid.items():
+            # Check if peer is in the POS data results
+            if peer_id not in pos or not pos[peer_id]:
+                # Remove peer from routing table
+                self.routing_table.__delitem__(dht_id)
+
     def add_routing_table(self, routing_table: RoutingTable) -> None:
         self.routing_table = routing_table
+
+    def decode_data(self, data):
+        try:
+            as_bytes = bytes(data)
+            as_scale_bytes = ScaleBytes(as_bytes)
+            obj = RuntimeConfiguration().create_scale_object("BTreeMap<Vec<u8>,bool>", data=as_scale_bytes)
+            return obj.decode()
+        except Exception as e:
+            return None
+
 
     async def start(self):
         """Start the RPC query."""

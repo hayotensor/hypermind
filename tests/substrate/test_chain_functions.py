@@ -1,3 +1,4 @@
+from typing import Dict
 import pytest
 import scalecodec
 from substrateinterface import SubstrateInterface
@@ -32,10 +33,35 @@ async def test_valid_request_and_response():
     peer_ids
   )
 
-  peers = bytes(peers['result'])
+  # peers = bytes(peers['result'])
+  # as_bytes = bytes(peers)
 
-  as_bytes = bytes(peers)
-  as_scale_bytes = scalecodec.ScaleBytes(as_bytes)
+  as_bytes = bytes(peers['result'])
+  as_scale_bytes = ScaleBytes(as_bytes)
   obj = RuntimeConfiguration().create_scale_object("BTreeMap<Vec<u8>,bool>", data=as_scale_bytes)
   obj.decode()
-  print(obj.value)
+
+  data = obj.value
+  print(data)
+
+  for peer_id, is_staked in data:
+    print("peer_id ", peer_id)
+    print("is_staked ", is_staked)
+
+  peer_status = {peer_id: flag for peer_id, flag in data}
+  print("peer_status ", peer_status)
+
+  peer_id_to_uid: Dict[str, str] = {
+      '12D0KooWGFuUunX1AzAzjs3CgyqTXtPWX3AqRhJFbesGPGYHJQTP': 'DHT1',
+      '12D2KooWGFuUunX1AzAzjs3CgyqTXtPWX3AqRhJFbesGPGYHJQTP': 'DHT2',
+      '12D4KooWGFuUunX1AzAzjs3CgyqTXtPWX3AqRhJFbesGPGYHJQTP': 'DHT3',
+      '12D6KooWGFuUunX1AzAzjs3CgyqTXtPWX3AqRhJFbesGPGYHJQTP': 'DHT4'  # Not in pos_tuples_data
+  }
+
+  pos = {peer_id: flag for peer_id, flag in data}
+
+  for peer_id, dht_id in peer_id_to_uid.items():
+      # Check if peer is in the POS data results
+      if peer_id not in pos or not pos[peer_id]:
+          # Remove peer from routing table
+          print(f"Removed Peer: {peer_id} DHTID: {dht_id}")
