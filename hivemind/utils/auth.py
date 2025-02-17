@@ -10,9 +10,10 @@ from hivemind.proto.auth_pb2 import AccessToken, RequestAuthInfo, ResponseAuthIn
 from hivemind.p2p.p2p_daemon_bindings.datastructures import PeerID
 from hivemind.utils.crypto import Ed25519PrivateKey, Ed25519PublicKey
 from hivemind.utils.logging import get_logger
-from hivemind.substrate.chain_functions import is_subnet_node_by_peer_id
+from hivemind.substrate.chain_functions import is_subnet_node_by_a_parameter, is_subnet_node_by_peer_id
 from hivemind.utils.timed_storage import TimedStorage, get_dht_time
 from hivemind.proto import crypto_pb2
+from hivemind.utils.ledger import logger_ledger
 
 from substrateinterface import SubstrateInterface
 
@@ -301,6 +302,9 @@ class POSAuthorizerLive(AuthorizerBase):
     Implements a proof-of-stake authorization protocol using Ed25519 keys
     Checks the Hypertensor network for nodes ``peer_id`` is staked.
     The ``peer_id`` is retrieved using the Ed25519 public key
+
+    This does NOT handle the removal of peers in the routing table, only communication
+    See `POSExternalEventBase` for node removals
     """
     def __init__(
         self, 
@@ -315,7 +319,7 @@ class POSAuthorizerLive(AuthorizerBase):
         self.subnet_id = subnet_id
         self.peer_id_to_last_update: Dict[PeerID, int] = dict()
         self.peer_id_to_failed_pos_last_update: Dict[PeerID, int] = dict()
-        self.pos_interim = 60
+        self.pos_interval = 60
         self.interface = interface
 
     async def get_token(self) -> AccessToken:
@@ -363,10 +367,12 @@ class POSAuthorizerLive(AuthorizerBase):
         # Verify signature of the request from signer
         if not client_public_key.verify(request.SerializeToString(), signature):
             logger.debug("Request has invalid signature")
+            logger_ledger.log_ledger("Request has invalid signature")
             return False
 
         if auth.service_public_key and auth.service_public_key != self._local_public_key.to_bytes():
             logger.debug("Request is generated for a peer with another public key")
+            logger_ledger.log_ledger("Request is generated for a peer with another public key")
             return False
 
         # Verify proof of stake
@@ -375,6 +381,7 @@ class POSAuthorizerLive(AuthorizerBase):
             return proof_of_stake
         except Exception as e:
             logger.debug("Proof of stake failed, validate request", e, exc_info=True)
+            logger_ledger.log_ledger("Request is generated for a peer with another public key", e, exc_info=True)
 
         return False
 
@@ -398,10 +405,12 @@ class POSAuthorizerLive(AuthorizerBase):
         auth.signature = b""
         if not service_public_key.verify(response.SerializeToString(), signature):
             logger.debug("Response has invalid signature")
+            logger_ledger.log_ledger("Response has invalid signature")
             return False
 
         if auth.nonce != request.auth.nonce:
             logger.debug("Response is generated for another request")
+            logger_ledger.log_ledger("Response is generated for another request")
             return False
 
         try:
@@ -409,6 +418,7 @@ class POSAuthorizerLive(AuthorizerBase):
             return proof_of_stake
         except Exception as e:
             logger.debug("Proof of stake failed, validate response", e, exc_info=True)
+            logger_ledger.log_ledger("Proof of stake failed, validate response", e, exc_info=True)
 
         return False
 
@@ -416,22 +426,27 @@ class POSAuthorizerLive(AuthorizerBase):
         timestamp = get_dht_time()
         self.peer_id_to_last_update[peer_id] = timestamp
 
+    def delete_peer_id(self, peer_id: PeerID):
+        self.peer_id_to_last_update.pop(peer_id, None)
+
     def get_peer_id_last_update(self, peer_id: PeerID) -> int:
         last_update = self.peer_id_to_last_update.get(peer_id)
         if last_update is None:
             return 0
         return last_update
 
-    def should_skip_authentication(self, peer_id: PeerID) -> bool:
-        last_update = self.peer_id_to_failed_pos_last_update.get(peer_id)
-        if last_update is None:
-            return False
+    # def should_skip_authentication(self, peer_id: PeerID) -> bool:
+    #     last_update = self.peer_id_to_failed_pos_last_update.get(peer_id)
+    #     # if peer is new, don't skip
+    #     if last_update is None:
+    #         return False
 
-        timestamp = get_dht_time()
+    #     timestamp = get_dht_time()
 
-        # 1100 - 1000 (=100) < 60
-        if last_update is not None and timestamp - last_update < self.pos_interim:
-            return True
+    #     # 1100 - 1000 (=100) < 60
+    #     # Skip if previously staked and under pos_interval
+    #     if last_update is not None and timestamp - last_update < self.pos_interval:
+    #         return True
 
     def proof_of_stake(self, public_key: Ed25519PublicKey) -> bool:        
         peer_id: PeerID = self.get_peer_id(public_key)
@@ -442,20 +457,24 @@ class POSAuthorizerLive(AuthorizerBase):
         
         last_update = self.get_peer_id_last_update(peer_id)
         timestamp = get_dht_time()
-
-        if last_update != 0 and timestamp - last_update < self.pos_interim:
+        
+        # if previously known to be staked and hasn't surpassed the interval, return as True
+        if last_update != 0 and timestamp - last_update < self.pos_interval:
             return True
 
         peer_id_vec = self.to_vec_u8(peer_id.to_base58())
+        # Check Hypertensor
         proof_of_stake = self.is_staked(peer_id_vec)
 
         if proof_of_stake is False:
-            self.peer_id_to_last_update.pop(peer_id, None)
+            # If not staked, remove from mappings and return False
+            self.delete_peer_id(peer_id)
             self.peer_id_to_failed_pos_last_update[peer_id] = timestamp
             return False
         else:
             self.peer_id_to_failed_pos_last_update.pop(peer_id, None)
 
+        # Peer is staked, update data
         self.add_or_update_peer_id(peer_id)
         return proof_of_stake
 
@@ -479,6 +498,7 @@ class POSAuthorizerLive(AuthorizerBase):
         return [ord(char) for char in string]
 
     def is_staked(self, peer_id_vector) -> bool:
+        # each subnet node must be staked to be one so we only check if they're a sn
         result = is_subnet_node_by_peer_id(
             self.interface,
             self.subnet_id,
@@ -491,6 +511,23 @@ class POSAuthorizerLive(AuthorizerBase):
         # must be True or False
         if result["result"] is not True and result["result"] is not False:
             return False
+
+        is_staked = result["result"]
+
+        # Check for boostrap node under SubnetNode `a` parameter
+        if not is_staked:
+            result = is_subnet_node_by_a_parameter(
+                self.interface,
+                self.subnet_id,
+                peer_id_vector
+            )
+
+            if "result" not in result:
+                return False
+                    
+            # must be True or False
+            if result["result"] is not True and result["result"] is not False:
+                return False
 
         return result["result"]
 

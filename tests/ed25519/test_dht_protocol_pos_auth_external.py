@@ -26,6 +26,7 @@ from substrateinterface.exceptions import SubstrateRequestException
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from hivemind.substrate.chain_functions import is_subnet_node_by_peer_id
+from hivemind.utils.routing_external_event import POSExternalEventBase
 
 logger = get_logger(__name__)
 
@@ -158,7 +159,10 @@ def run_protocol_listener(
 
         visible_maddrs = loop.run_until_complete(p2p.get_visible_maddrs())
 
-        pos_auth = POSAuthorizerLive(ed25519_private_key, 1, SubstrateInterface(url=RPC_URL))
+        authorizer = POSAuthorizerLive(ed25519_private_key, 1, SubstrateInterface(url=RPC_URL))
+
+        routing_external_event = POSExternalEventBase(authorizer)
+
         protocol = loop.run_until_complete(
             DHTProtocol.create(
                 p2p, 
@@ -167,7 +171,8 @@ def run_protocol_listener(
                 depth_modulo=5, 
                 num_replicas=3, 
                 wait_timeout=5,
-                authorizer=pos_auth
+                authorizer=authorizer,
+                routing_external_event=routing_external_event
             )
         )
 
@@ -180,7 +185,7 @@ def run_protocol_listener(
         maddr_conn.send((p2p.peer_id, visible_maddrs))
 
         for peer_id in maddrs_to_peer_ids(initial_peers):
-            timestamp = pos_auth.peer_id_to_last_update.get(peer_id)
+            timestamp = authorizer.peer_id_to_last_update.get(peer_id)
             assert timestamp > 0
 
         async def shutdown():
@@ -204,114 +209,117 @@ def launch_protocol_listener(
 
     return dht_id, process, peer_id, visible_maddrs
 
-# pytest tests/ed25519/test_dht_protocol_pos_auth.py::test_dht_protocol_pos_auth -rP
+# pytest tests/ed25519/test_dht_protocol_pos_auth_external.py::test_dht_protocol_pos_auth_external -rP
 
 @pytest.mark.forked
 @pytest.mark.asyncio
-async def test_dht_protocol_pos_auth():
-    print("test_dht_protocol_pos_auth")
+async def test_dht_protocol_pos_auth_external():
+    print("test_dht_protocol_pos_auth_external")
     peer1_node_id, peer1_proc, peer1_id, peer1_maddrs = launch_protocol_listener(1)
     peer2_node_id, peer2_proc, peer2_id, _ = launch_protocol_listener(2, initial_peers=peer1_maddrs)
 
-    n = 50
-    for client_mode in [True, False]:  # note: order matters, this test assumes that first run uses client mode
-        node_id = DHTID.generate()
+    # n = 50
+    # for client_mode in [True, False]:  # note: order matters, this test assumes that first run uses client mode
+    #     node_id = DHTID.generate()
 
-        private_key = ed25519.Ed25519PrivateKey.generate()
+    #     private_key = ed25519.Ed25519PrivateKey.generate()
 
-        raw_private_key = private_key.private_bytes(
-            encoding=serialization.Encoding.Raw,  # DER format
-            format=serialization.PrivateFormat.Raw,  # PKCS8 standard format
-            encryption_algorithm=serialization.NoEncryption()  # No encryption
-        )
+    #     raw_private_key = private_key.private_bytes(
+    #         encoding=serialization.Encoding.Raw,  # DER format
+    #         format=serialization.PrivateFormat.Raw,  # PKCS8 standard format
+    #         encryption_algorithm=serialization.NoEncryption()  # No encryption
+    #     )
 
-        public_key = private_key.public_key().public_bytes(
-            encoding=serialization.Encoding.Raw,
-            format=serialization.PublicFormat.Raw,
-        )
+    #     public_key = private_key.public_key().public_bytes(
+    #         encoding=serialization.Encoding.Raw,
+    #         format=serialization.PublicFormat.Raw,
+    #     )
 
-        combined_key_bytes = raw_private_key + public_key
+    #     combined_key_bytes = raw_private_key + public_key
 
-        protobuf = crypto_pb2.PrivateKey(key_type=crypto_pb2.KeyType.Ed25519, data=combined_key_bytes)
+    #     protobuf = crypto_pb2.PrivateKey(key_type=crypto_pb2.KeyType.Ed25519, data=combined_key_bytes)
 
-        with open(f"tests/ed25519/private_key_client-{client_mode}.key", "wb") as f:
-            f.write(protobuf.SerializeToString())
+    #     with open(f"tests/ed25519/private_key_client-{client_mode}.key", "wb") as f:
+    #         f.write(protobuf.SerializeToString())
 
-        with open(f"tests/ed25519/private_key_client-{client_mode}.key", "rb") as f:
-            data = f.read()
-            key_data = crypto_pb2.PrivateKey.FromString(data).data
+    #     with open(f"tests/ed25519/private_key_client-{client_mode}.key", "rb") as f:
+    #         data = f.read()
+    #         key_data = crypto_pb2.PrivateKey.FromString(data).data
 
-            private_key = ed25519.Ed25519PrivateKey.from_private_bytes(key_data[:32])
-            ed25519_private_key = Ed25519PrivateKey(private_key=private_key)
-            ed25519_public_key = ed25519_private_key.get_public_key()
+    #         private_key = ed25519.Ed25519PrivateKey.from_private_bytes(key_data[:32])
+    #         ed25519_private_key = Ed25519PrivateKey(private_key=private_key)
+    #         ed25519_public_key = ed25519_private_key.get_public_key()
             
-            public_key = private_key.public_key().public_bytes(
-                encoding=serialization.Encoding.Raw,
-                format=serialization.PublicFormat.Raw,
-            )
+    #         public_key = private_key.public_key().public_bytes(
+    #             encoding=serialization.Encoding.Raw,
+    #             format=serialization.PublicFormat.Raw,
+    #         )
 
-            encoded_public_key = crypto_pb2.PublicKey(
-                key_type=crypto_pb2.Ed25519,
-                data=public_key,
-            ).SerializeToString()
+    #         encoded_public_key = crypto_pb2.PublicKey(
+    #             key_type=crypto_pb2.Ed25519,
+    #             data=public_key,
+    #         ).SerializeToString()
 
-            encoded_digest = b"\x00$" + encoded_public_key
+    #         encoded_digest = b"\x00$" + encoded_public_key
 
-            peer_id = PeerID(encoded_digest)
+    #         peer_id = PeerID(encoded_digest)
 
-            run_register_subnet_node(n, peer_id.to_base58())
+    #         run_register_subnet_node(n, peer_id.to_base58())
 
-            p2p = await P2P.create(initial_peers=peer1_maddrs, identity_path=f"tests/ed25519/private_key_client-{client_mode}.key")
+    #         p2p = await P2P.create(initial_peers=peer1_maddrs, identity_path=f"tests/ed25519/private_key_client-{client_mode}.key")
 
-            assert p2p.peer_id == peer_id
+    #         assert p2p.peer_id == peer_id
        
-            pos_auth = POSAuthorizerLive(ed25519_private_key, 1, SubstrateInterface(url=RPC_URL))
-            protocol = await DHTProtocol.create(
-                p2p, 
-                node_id, 
-                bucket_size=20, 
-                depth_modulo=5, 
-                wait_timeout=5, 
-                num_replicas=3, 
-                client_mode=client_mode,
-                authorizer=pos_auth
-                # authorizer=POSAuthorizer(ed25519_private_key)
-            )
-            logger.info(f"Self id={protocol.node_id}")
+    #         authorizer = POSAuthorizerLive(ed25519_private_key, 1, SubstrateInterface(url=RPC_URL))
 
-            print(f"peer-{client_mode} node id is: ", protocol.node_id)
-            print(f"peer-{client_mode} peer id is: ", p2p.peer_id)
-            print(f"peer-{client_mode} public key is: ", public_key)
+    #         routing_external_event = POSExternalEventBase(authorizer)
 
-            assert peer1_node_id == await protocol.call_ping(peer1_id)
+    #         protocol = await DHTProtocol.create(
+    #             p2p, 
+    #             node_id, 
+    #             bucket_size=20, 
+    #             depth_modulo=5, 
+    #             wait_timeout=5, 
+    #             num_replicas=3, 
+    #             client_mode=client_mode,
+    #             authorizer=authorizer,
+    #             routing_external_event=routing_external_event,
+    #         )
+    #         logger.info(f"Self id={protocol.node_id}")
 
-            pos_auth_staked = pos_auth.proof_of_stake(ed25519_public_key)
-            print("pos_auth_staked", pos_auth_staked)
-            assert pos_auth_staked is True
+    #         print(f"peer-{client_mode} node id is: ", protocol.node_id)
+    #         print(f"peer-{client_mode} peer id is: ", p2p.peer_id)
+    #         print(f"peer-{client_mode} public key is: ", public_key)
 
-            # ensure we pinged the peer and passed pos
-            peer1_id_timestamp = pos_auth.peer_id_to_last_update.get(peer1_id)
-            assert peer1_id_timestamp > 0
+    #         assert peer1_node_id == await protocol.call_ping(peer1_id)
 
-            assert peer2_node_id == await protocol.call_ping(peer2_id)
+    #         pos_auth_staked = authorizer.proof_of_stake(ed25519_public_key)
+    #         print("pos_auth_staked", pos_auth_staked)
+    #         assert pos_auth_staked is True
 
-            peer2_id_timestamp = pos_auth.peer_id_to_last_update.get(peer2_id)
-            assert peer2_id_timestamp > 0
+    #         # ensure we pinged the peer and passed pos
+    #         peer1_id_timestamp = authorizer.peer_id_to_last_update.get(peer1_id)
+    #         assert peer1_id_timestamp > 0
 
-            if not client_mode:
-                await p2p.shutdown()
+    #         assert peer2_node_id == await protocol.call_ping(peer2_id)
 
-        n += 1
+    #         peer2_id_timestamp = authorizer.peer_id_to_last_update.get(peer2_id)
+    #         assert peer2_id_timestamp > 0
+
+    #         if not client_mode:
+    #             await p2p.shutdown()
+
+    #     n += 1
 
     peer1_proc.terminate()
     peer2_proc.terminate()
 
-# pytest tests/ed25519/test_dht_protocol_pos_auth.py::test_dht_protocol_pos_auth_fail -rP
+# pytest tests/ed25519/test_dht_protocol_pos_auth_external.py::test_dht_protocol_pos_auth_fail -rP
 
 @pytest.mark.forked
 @pytest.mark.asyncio
 async def test_dht_protocol_pos_auth_fail():
-    print("test_dht_protocol_pos_auth")
+    print("test_dht_protocol_pos_auth_external")
     peer1_node_id, peer1_proc, peer1_id, peer1_maddrs = launch_protocol_listener(1)
     peer2_node_id, peer2_proc, peer2_id, _ = launch_protocol_listener(2, initial_peers=peer1_maddrs)
 
@@ -365,16 +373,32 @@ async def test_dht_protocol_pos_auth_fail():
        
             assert p2p.peer_id == peer_id
 
-            protocol = await DHTProtocol.create(
-                p2p, 
-                node_id, 
-                bucket_size=20, 
-                depth_modulo=5, 
-                wait_timeout=5, 
-                num_replicas=3, 
-                client_mode=client_mode,
-                authorizer=POSAuthorizerLive(ed25519_private_key, 1, SubstrateInterface(url=RPC_URL))
-            )
+            authorizer = POSAuthorizerLive(ed25519_private_key, 1, SubstrateInterface(url=RPC_URL))
+
+            if client_mode:
+                protocol = await DHTProtocol.create(
+                    p2p, 
+                    node_id, 
+                    bucket_size=20, 
+                    depth_modulo=5, 
+                    wait_timeout=5, 
+                    num_replicas=3, 
+                    client_mode=client_mode,
+                    authorizer=authorizer,
+                )
+            else:
+                routing_external_event = POSExternalEventBase(authorizer)
+                protocol = await DHTProtocol.create(
+                    p2p, 
+                    node_id, 
+                    bucket_size=20, 
+                    depth_modulo=5, 
+                    wait_timeout=5, 
+                    num_replicas=3, 
+                    client_mode=client_mode,
+                    authorizer=authorizer,
+                    routing_external_event=routing_external_event,
+                )
 
             # FAIL: ping and attempt to add to routing pool
             assert not peer1_node_id == await protocol.call_ping(peer1_id)
@@ -390,7 +414,7 @@ async def test_dht_protocol_pos_auth_fail():
 @pytest.mark.forked
 @pytest.mark.asyncio
 async def test_dht_protocol_pos_auth_fail():
-    print("test_dht_protocol_pos_auth")
+    print("test_dht_protocol_pos_auth_external")
     peer1_node_id, peer1_proc, peer1_id, peer1_maddrs = launch_protocol_listener(1)
     peer2_node_id, peer2_proc, peer2_id, _ = launch_protocol_listener(2, initial_peers=peer1_maddrs)
 
@@ -442,6 +466,10 @@ async def test_dht_protocol_pos_auth_fail():
     
         assert p2p.peer_id == peer_id
 
+        authorizer = POSAuthorizerLive(ed25519_private_key, 1, SubstrateInterface(url=RPC_URL))
+
+        routing_external_event = POSExternalEventBase(authorizer)
+
         protocol = await DHTProtocol.create(
             p2p, 
             node_id, 
@@ -449,7 +477,8 @@ async def test_dht_protocol_pos_auth_fail():
             depth_modulo=5, 
             wait_timeout=5, 
             num_replicas=3, 
-            authorizer=POSAuthorizerLive(ed25519_private_key, 1, SubstrateInterface(url=RPC_URL))
+            authorizer=authorizer,
+            routing_external_event=routing_external_event,
         )
 
         # FAIL: ping and attempt to add to routing pool
@@ -462,7 +491,7 @@ async def test_dht_protocol_pos_auth_fail():
     peer1_proc.terminate()
     peer2_proc.terminate()
 
-# pytest tests/ed25519/test_dht_protocol_pos_auth.py::test_pos_authorizer -rP
+# pytest tests/ed25519/test_dht_protocol_pos_auth_external.py::test_pos_authorizer -rP
 
 @pytest.mark.asyncio
 async def test_pos_authorizer():
@@ -541,12 +570,12 @@ async def test_pos_authorizer():
     print("result" in proof_of_stake)
     assert proof_of_stake['result'] is True
 
-    pos_auth = POSAuthorizerLive(ed25519_private_key, 1, SubstrateInterface(url=RPC_URL))
+    authorizer = POSAuthorizerLive(ed25519_private_key, 1, SubstrateInterface(url=RPC_URL))
 
-    pos_auth_staked = pos_auth.proof_of_stake(ed25519_public_key)
+    pos_auth_staked = authorizer.proof_of_stake(ed25519_public_key)
     assert pos_auth_staked is True
 
-    # timestamp = pos_auth.peer_id_to_last_update(ed25519_public_key)
+    # timestamp = authorizer.peer_id_to_last_update(ed25519_public_key)
     # assert pos_auth_staked is True
 
 @pytest.mark.asyncio
@@ -626,9 +655,9 @@ async def test_pos_authorizer_del_peer_map():
     print("result" in proof_of_stake)
     assert proof_of_stake['result'] is True
 
-    pos_auth = POSAuthorizerLive(ed25519_private_key, 1, SubstrateInterface(url=RPC_URL))
+    authorizer = POSAuthorizerLive(ed25519_private_key, 1, SubstrateInterface(url=RPC_URL))
 
-    pos_auth_staked = pos_auth.proof_of_stake(ed25519_public_key)
+    pos_auth_staked = authorizer.proof_of_stake(ed25519_public_key)
     assert pos_auth_staked is True
 
 

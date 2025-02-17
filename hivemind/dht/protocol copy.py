@@ -11,6 +11,7 @@ from hivemind.p2p import P2P, P2PContext, PeerID, ServicerBase
 from hivemind.proto import dht_pb2
 from hivemind.utils import MSGPackSerializer, get_logger
 from hivemind.utils.auth import AuthorizerBase, AuthRole, AuthRPCWrapper
+from hivemind.utils.routing_external_event import RoutingExternalEventBase
 from hivemind.utils.timed_storage import (
     MAX_DHT_TIME_DISCREPANCY_SECONDS,
     DHTExpiration,
@@ -46,7 +47,7 @@ class DHTProtocol(ServicerBase):
         client_mode: bool = False,
         record_validator: Optional[RecordValidatorBase] = None,
         authorizer: Optional[AuthorizerBase] = None,
-        event_listener: Optional[AuthorizerBase] = None,
+        routing_external_event: Optional[RoutingExternalEventBase] = None,
     ) -> DHTProtocol:
         """
         A protocol that allows DHT nodes to request keys/neighbors from other DHT nodes.
@@ -78,6 +79,10 @@ class DHTProtocol(ServicerBase):
         else:
             # note: use empty node_info so peers won't add you to their routing tables
             self.node_info = dht_pb2.NodeInfo()
+
+        if routing_external_event:
+            routing_external_event.add_routing_table(self.routing_table, start=True)
+
         return self
 
     async def shutdown(self) -> None:
