@@ -42,9 +42,9 @@ def proto_compile(output_path):
 
     cli_args = [
         "grpc_tools.protoc",
-        "--proto_path=hivemind/proto",
+        "--proto_path=hypermind/proto",
         f"--python_out={output_path}",
-    ] + glob.glob("hivemind/proto/*.proto")
+    ] + glob.glob("hypermind/proto/*.proto")
 
     code = grpc_tools.protoc.main(cli_args)
     if code:  # hint: if you get this error in jupyter, run in console for richer error message
@@ -76,7 +76,7 @@ def build_p2p_daemon():
             tar.extractall(tempdir)
 
         result = subprocess.run(
-            ["go", "build", "-o", os.path.join(here, "hivemind", "hivemind_cli", "p2pd")],
+            ["go", "build", "-o", os.path.join(here, "hypermind", "hypermind_cli", "p2pd")],
             cwd=os.path.join(tempdir, f"go-libp2p-daemon-{P2PD_VERSION.lstrip('v')}", "p2pd"),
         )
         if result.returncode != 0:
@@ -84,7 +84,7 @@ def build_p2p_daemon():
 
 
 def download_p2p_daemon():
-    binary_path = os.path.join(here, "hivemind", "hivemind_cli", "p2pd")
+    binary_path = os.path.join(here, "hypermind", "hypermind_cli", "p2pd")
     arch = platform.machine()
     # An architecture name may vary depending on the OS (e.g., the same CPU is arm64 on macOS and aarch64 on Linux).
     # We consider multiple aliases here, see https://stackoverflow.com/questions/45125516/possible-values-for-uname-m
@@ -96,7 +96,7 @@ def download_p2p_daemon():
 
     if binary_name not in P2P_BINARY_HASH:
         raise RuntimeError(
-            f"hivemind does not provide a precompiled p2pd binary for {platform.system()} ({arch}). "
+            f"hypermind does not provide a precompiled p2pd binary for {platform.system()} ({arch}). "
             f"Please install Go and build it from source: https://github.com/learning-at-home/hivemind#from-source"
         )
     expected_hash = P2P_BINARY_HASH[binary_name]
@@ -130,7 +130,7 @@ class BuildPy(build_py):
 
         super().run()
 
-        proto_compile(os.path.join(self.build_lib, "hivemind", "proto"))
+        proto_compile(os.path.join(self.build_lib, "hypermind", "proto"))
 
 
 class Develop(develop):
@@ -144,7 +144,7 @@ with open("requirements.txt") as requirements_file:
     install_requires = list(map(str, parse_requirements(requirements_file)))
 
 # loading version from setup.py
-with codecs.open(os.path.join(here, "hivemind/__init__.py"), encoding="utf-8") as init_file:
+with codecs.open(os.path.join(here, "hypermind/__init__.py"), encoding="utf-8") as init_file:
     version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", init_file.read(), re.M)
     version_string = version_match.group(1)
 
@@ -161,7 +161,7 @@ extras["bitsandbytes"] = ["bitsandbytes~=0.41.1"]
 extras["all"] = extras["dev"] + extras["docs"] + extras["bitsandbytes"]
 
 setup(
-    name="hivemind",
+    name="hypermind",
     version=version_string,
     cmdclass={"build_py": BuildPy, "develop": Develop},
     description="Decentralized deep learning in PyTorch",
@@ -171,7 +171,7 @@ setup(
     author_email="hivemind-team@hotmail.com",
     url="https://github.com/learning-at-home/hivemind",
     packages=find_packages(exclude=["tests"]),
-    package_data={"hivemind": ["proto/*", "hivemind_cli/*"]},
+    package_data={"hypermind": ["proto/*", "hypermind_cli/*"]},
     include_package_data=True,
     license="MIT",
     setup_requires=["grpcio-tools"],
@@ -196,8 +196,8 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "hivemind-dht = hivemind.hivemind_cli.run_dht:main",
-            "hivemind-server = hivemind.hivemind_cli.run_server:main",
+            "hypermind-dht = hypermind.hypermind_cli.run_dht:main",
+            "hypermind-server = hypermind.hypermind_cli.run_server:main",
         ]
     },
     # What does your project relate to?

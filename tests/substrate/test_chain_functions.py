@@ -5,7 +5,7 @@ from substrateinterface import SubstrateInterface
 from scalecodec.base import RuntimeConfiguration, ScaleBytes
 from scalecodec.type_registry import load_type_registry_preset
 
-from hivemind.substrate.chain_functions import are_subnet_nodes_by_peer_id
+from hypermind.substrate.chain_functions import are_subnet_nodes_by_peer_id
 from utils import RPC_URL
 
 def get_peer_ids(count: int):

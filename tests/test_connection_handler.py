@@ -7,17 +7,17 @@ from typing import Any, Dict
 import pytest
 import torch
 
-from hivemind.compression import deserialize_tensor_stream, deserialize_torch_tensor, serialize_torch_tensor
-from hivemind.dht import DHT
-from hivemind.moe.server.connection_handler import ConnectionHandler
-from hivemind.moe.server.module_backend import ModuleBackend
-from hivemind.moe.server.task_pool import TaskPool
-from hivemind.p2p.p2p_daemon_bindings.control import DEFAULT_MAX_MSG_SIZE, P2PHandlerError
-from hivemind.proto import runtime_pb2
-from hivemind.utils.asyncio import amap_in_executor, iter_as_aiter
-from hivemind.utils.serializer import MSGPackSerializer
-from hivemind.utils.streaming import split_for_streaming
-from hivemind.utils.tensor_descr import BatchTensorDescriptor
+from hypermind.compression import deserialize_tensor_stream, deserialize_torch_tensor, serialize_torch_tensor
+from hypermind.dht import DHT
+from hypermind.moe.server.connection_handler import ConnectionHandler
+from hypermind.moe.server.module_backend import ModuleBackend
+from hypermind.moe.server.task_pool import TaskPool
+from hypermind.p2p.p2p_daemon_bindings.control import DEFAULT_MAX_MSG_SIZE, P2PHandlerError
+from hypermind.proto import runtime_pb2
+from hypermind.utils.asyncio import amap_in_executor, iter_as_aiter
+from hypermind.utils.serializer import MSGPackSerializer
+from hypermind.utils.streaming import split_for_streaming
+from hypermind.utils.tensor_descr import BatchTensorDescriptor
 
 # ed25519 
 
@@ -158,13 +158,13 @@ async def test_connection_handler_backward(client_stub):
 @pytest.mark.forked
 @pytest.mark.asyncio
 async def test_connection_handler_shutdown():
-    # Here, all handlers will have the common hivemind.DHT and hivemind.P2P instances
+    # Here, all handlers will have the common hypermind.DHT and hypermind.P2P instances
     handler_dht = DHT(start=True)
     module_backends = {"expert1": DummyModuleBackend("expert1", k=1), "expert2": DummyModuleBackend("expert2", k=2)}
 
     for _ in range(3):
         handler = ConnectionHandler(handler_dht, module_backends, balanced=False, start=True)
-        # The line above would raise an exception if the previous handlers were not removed from hivemind.P2P
+        # The line above would raise an exception if the previous handlers were not removed from hypermind.P2P
         handler.shutdown()
 
     handler_dht.shutdown()

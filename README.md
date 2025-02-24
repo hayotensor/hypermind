@@ -1,4 +1,4 @@
-## Hivemind: decentralized deep learning in PyTorch
+## Hypermind: decentralized deep learning in PyTorch
 
 [![Documentation Status](https://readthedocs.org/projects/learning-at-home/badge/?version=latest)](https://learning-at-home.readthedocs.io/en/latest/?badge=latest)
 [![PyPI version](https://img.shields.io/pypi/v/hivemind.svg?color=blue)](https://pypi.org/project/hivemind/)
@@ -7,7 +7,7 @@
 ![Codecov](https://img.shields.io/codecov/c/github/learning-at-home/hivemind)
 [![Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-Hivemind is a PyTorch library for decentralized deep learning across the Internet. Its intended usage is training one
+Hypermind is a PyTorch library for decentralized deep learning across the Internet. Its intended usage is training one
 large model on hundreds of computers from different universities, companies, and volunteers.
 
 ![img](https://i.imgur.com/GPxolxb.gif)
@@ -28,7 +28,7 @@ see the [full list](#citation) of our papers below.
 
 ## Example Use Cases
 
-This section lists projects that leverage hivemind for decentralized training. 
+This section lists projects that leverage hypermind for decentralized training. 
 If you have successfully trained a model or created a downstream repository with the help of our library, 
 feel free to submit a pull request that adds your project to this list.
 

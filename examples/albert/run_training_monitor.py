@@ -11,15 +11,15 @@ import wandb
 from torch_optimizer import Lamb
 from transformers import AlbertConfig, AlbertForPreTraining, HfArgumentParser, get_linear_schedule_with_warmup
 
-import hivemind
-from hivemind.optim.state_averager import TrainingStateAverager
-from hivemind.utils.logging import get_logger, use_hivemind_log_handler
-from hivemind.utils.networking import log_visible_maddrs
+import hypermind
+from hypermind.optim.state_averager import TrainingStateAverager
+from hypermind.utils.logging import get_logger, use_hypermind_log_handler
+from hypermind.utils.networking import log_visible_maddrs
 
 import utils
 from arguments import AveragerArguments, BaseTrainingArguments, OptimizerArguments
 
-use_hivemind_log_handler("in_root_logger")
+use_hypermind_log_handler("in_root_logger")
 logger = get_logger(__name__)
 
 
@@ -66,7 +66,7 @@ class CheckpointHandler:
         monitor_args: TrainingMonitorArguments,
         optimizer_args: OptimizerArguments,
         averager_args: AveragerArguments,
-        dht: hivemind.DHT,
+        dht: hypermind.DHT,
     ):
         self.save_checkpoint_step_interval = monitor_args.save_checkpoint_step_interval
         self.repo_path = monitor_args.repo_path
@@ -102,7 +102,7 @@ class CheckpointHandler:
             optimizer=opt,
             scheduler=get_linear_schedule_with_warmup(opt, num_warmup_steps=5000, num_training_steps=125_000),
             prefix=f"{run_id}_state_averager",
-            state_compression=hivemind.Float16Compression(),
+            state_compression=hypermind.Float16Compression(),
             bandwidth=optimizer_args.bandwidth,
             client_mode=optimizer_args.client_mode,
             start=True,
@@ -160,7 +160,7 @@ if __name__ == "__main__":
     run_id = monitor_args.run_id
     validators, local_public_key = utils.make_validators(run_id)
 
-    dht = hivemind.DHT(
+    dht = hypermind.DHT(
         start=True,
         initial_peers=monitor_args.initial_peers,
         record_validators=validators,

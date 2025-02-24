@@ -4,7 +4,7 @@ from functools import partial
 from subprocess import PIPE, Popen
 from tempfile import TemporaryDirectory
 
-from hivemind.moe.server import background_server
+from hypermind.moe.server import background_server
 
 # ed25519
 
@@ -30,12 +30,12 @@ def test_cli_run_server_identity_path():
 
         cloned_env = os.environ.copy()
         # overriding the loglevel to prevent debug print statements
-        cloned_env["HIVEMIND_LOGLEVEL"] = "INFO"
+        cloned_env["HYPERMIND_LOGLEVEL"] = "INFO"
 
         common_server_args = ["--hidden_dim", "4", "--num_handlers", "1"]
 
         server_1_proc = Popen(
-            ["hivemind-server", "--num_experts", "1", "--identity_path", id_path] + common_server_args,
+            ["hypermind-server", "--num_experts", "1", "--identity_path", id_path] + common_server_args,
             stderr=PIPE,
             text=True,
             encoding="utf-8",
@@ -54,7 +54,7 @@ def test_cli_run_server_identity_path():
         assert len(ids_1) == 1
 
         server_2_proc = Popen(
-            ["hivemind-server", "--num_experts", "1", "--identity_path", id_path] + common_server_args,
+            ["hypermind-server", "--num_experts", "1", "--identity_path", id_path] + common_server_args,
             stderr=PIPE,
             text=True,
             encoding="utf-8",
@@ -70,7 +70,7 @@ def test_cli_run_server_identity_path():
         assert len(ids_2) == 1
 
         server_3_proc = Popen(
-            ["hivemind-server", "--num_experts", "1"] + common_server_args,
+            ["hypermind-server", "--num_experts", "1"] + common_server_args,
             stderr=PIPE,
             text=True,
             encoding="utf-8",

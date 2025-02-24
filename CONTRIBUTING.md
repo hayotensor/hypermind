@@ -1,6 +1,6 @@
-# Contributing to hivemind
+# Contributing to hypermind
 
-This document covers the technical details of making your contributions to the code of hivemind. For other ways to
+This document covers the technical details of making your contributions to the code of hypermind. For other ways to
 contribute, read the [contributing guide](https://learning-at-home.readthedocs.io/en/latest/user/contributing.html) in
 our documentation.
 
@@ -10,11 +10,11 @@ for it to be reviewed by the library maintainers (and possibly other community m
 
 ## Environment setup
 
-First, install hivemind in the development mode, preferably with Python 3.8+ on Linux.
+First, install hypermind in the development mode, preferably with Python 3.8+ on Linux.
 
 ```
 git clone https://github.com/learning-at-home/hivemind
-cd hivemind
+cd hypermind
 pip install -e .[dev]
 ``` 
 
@@ -41,7 +41,7 @@ with the following rules:
   repository. Also, you may want to check your code for typos by running `codespell --skip=".git"`, though there
   might be false positives.
 * We highly encourage the use of [typing](https://docs.python.org/3/library/typing.html) where applicable.
-* Use `get_logger` from `hivemind.utils.logging` to log any information instead of `print`ing directly to standard
+* Use `get_logger` from `hypermind.utils.logging` to log any information instead of `print`ing directly to standard
   output/error streams.
 * Comments should be used sparingly and never describe the obvious. Usually it's best to clean up the code logic
   instead of describing it, as it might lead to redundant (or worse, stale or incorrect) messages.
@@ -54,7 +54,7 @@ with the following rules:
 
 ## Contribution formatting guidelines
 
-To make sure that each change to hivemind is consistent across the entire project history and is easy to review by any
+To make sure that each change to hypermind is consistent across the entire project history and is easy to review by any
 community member, follow these guidelines when submitting your pull request and writing commit messages. The library
 maintainers use the same rules when merging your commits into the master branch after the PR approval.
 
@@ -90,7 +90,7 @@ the pull request description (if it adheres to the format) or a cleaned up compi
 * In general, when naming a pull request instead of a commit, it's best to highlight the major change in its title
   instead of listing all modifications. Also, if a pull request makes significant changes to the library, it's best to
   give a high-level description in the title instead of a technical one:
-  compare `Implement decentralized parameter averaging` with `Add hivemind.client.averaging`.
+  compare `Implement decentralized parameter averaging` with `Add hypermind.client.averaging`.
 
 For more on the philosophy of easy-to-review pull requests, read these
 guides: [1](https://mtlynch.io/code-review-love/)
@@ -100,15 +100,15 @@ changed by the PR; however, they should not dilute its major purpose.
 
 ## Running tests
 
-Hivemind uses [pytest](https://github.com/pytest-dev/pytest/) for testing the behavior of the library modules. If you
+Hypermind uses [pytest](https://github.com/pytest-dev/pytest/) for testing the behavior of the library modules. If you
 implement a new part of the library, you are expected to write a test for the correctness of its implementation. If you
 discovered a bug in the existing code base and intend to fix it, it's also best if you add the steps to reproduce it as
 a new test to make sure it's not reintroduced by future changes.
 
-To run tests, you need to install hivemind in development mode with additional dependencies: `pip install -e .[dev]`.
+To run tests, you need to install hypermind in development mode with additional dependencies: `pip install -e .[dev]`.
 You can run all tests with `pytest tests/` or choose a specific subset, e.g., `pytest tests/test_dht.py`.
 
-When investigating test behavior, please note that pytest automatically wraps all hivemind tests with fixtures defined
+When investigating test behavior, please note that pytest automatically wraps all hypermind tests with fixtures defined
 in a global configuration file [`tests/conftest.py`](./tests/conftest.py), some of which will run automatically. For
 more informantion, refer to the [pytest documentation on fixtures](https://docs.pytest.org/en/6.2.x/fixture.html).
 
@@ -128,7 +128,7 @@ The documentation root will be available in `./docs/_build/html/index.html`
 
 ## Running benchmarks
 
-Currently, hivemind has three benchmark scripts for evaluating the impact of code changes on the most
+Currently, hypermind has three benchmark scripts for evaluating the impact of code changes on the most
 performance-sensitive parts of the library. If you make a change that might introduce a regression, you may be asked by
 the maintainers to provide the benchmarking results for your branch and a comparison with the master branch.
 

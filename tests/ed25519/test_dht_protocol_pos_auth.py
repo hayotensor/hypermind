@@ -9,23 +9,23 @@ import multihash
 import pytest
 from multiaddr import Multiaddr
 
-import hivemind
-from hivemind import P2P, PeerID, get_dht_time, get_logger
-from hivemind.dht import DHTID
-from hivemind.dht.protocol import DHTProtocol
-from hivemind.dht.storage import DictionaryDHTValue
+import hypermind
+from hypermind import P2P, PeerID, get_dht_time, get_logger
+from hypermind.dht import DHTID
+from hypermind.dht.protocol import DHTProtocol
+from hypermind.dht.storage import DictionaryDHTValue
 from cryptography.hazmat.primitives import serialization
 
-from hivemind.utils.auth import POSAuthorizer, POSAuthorizerLive
-from hivemind.utils.crypto import Ed25519PrivateKey
+from hypermind.utils.auth import POSAuthorizer, POSAuthorizerLive
+from hypermind.utils.crypto import Ed25519PrivateKey
 from cryptography.hazmat.primitives.asymmetric import ed25519
-from hivemind.proto import crypto_pb2
+from hypermind.proto import crypto_pb2
 
 from substrateinterface import SubstrateInterface, Keypair, ExtrinsicReceipt
 from substrateinterface.exceptions import SubstrateRequestException
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from hivemind.substrate.chain_functions import is_subnet_node_by_peer_id
+from hypermind.substrate.chain_functions import is_subnet_node_by_peer_id
 
 logger = get_logger(__name__)
 

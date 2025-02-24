@@ -5,10 +5,10 @@ from contextlib import AsyncExitStack
 import pytest
 from google.protobuf.message import EncodeError
 
-from hivemind.p2p.multiaddr import Multiaddr, protocols
-from hivemind.p2p.p2p_daemon_bindings.control import ControlClient, DaemonConnector, parse_conn_protocol
-from hivemind.p2p.p2p_daemon_bindings.datastructures import PeerID, PeerInfo, StreamInfo
-from hivemind.p2p.p2p_daemon_bindings.utils import (
+from hypermind.p2p.multiaddr import Multiaddr, protocols
+from hypermind.p2p.p2p_daemon_bindings.control import ControlClient, DaemonConnector, parse_conn_protocol
+from hypermind.p2p.p2p_daemon_bindings.datastructures import PeerID, PeerInfo, StreamInfo
+from hypermind.p2p.p2p_daemon_bindings.utils import (
     ControlFailure,
     raise_if_failed,
     read_pbmsg_safe,
@@ -16,7 +16,7 @@ from hivemind.p2p.p2p_daemon_bindings.utils import (
     write_pbmsg,
     write_unsigned_varint,
 )
-from hivemind.proto import p2pd_pb2 as p2pd_pb
+from hypermind.proto import p2pd_pb2 as p2pd_pb
 
 from test_utils.p2p_daemon import connect_safe, make_p2pd_pair_unix
 

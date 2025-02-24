@@ -2,10 +2,10 @@ from typing import Dict, List, Tuple
 
 from pydantic.v1 import BaseModel, StrictFloat, confloat, conint
 
-from hivemind.dht.crypto import RSASignatureValidator
-from hivemind.dht.schema import BytesWithPublicKey, SchemaValidator
-from hivemind.dht.validation import RecordValidatorBase
-from hivemind.utils.logging import get_logger
+from hypermind.dht.crypto import RSASignatureValidator
+from hypermind.dht.schema import BytesWithPublicKey, SchemaValidator
+from hypermind.dht.validation import RecordValidatorBase
+from hypermind.utils.logging import get_logger
 
 logger = get_logger(__name__)
 

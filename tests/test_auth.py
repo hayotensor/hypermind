@@ -3,11 +3,11 @@ from typing import Optional
 
 import pytest
 
-from hivemind.proto import dht_pb2
-from hivemind.proto.auth_pb2 import AccessToken
-from hivemind.utils.auth import AuthRole, AuthRPCWrapper, TokenAuthorizerBase
-from hivemind.utils.crypto import RSAPrivateKey
-from hivemind.utils.logging import get_logger
+from hypermind.proto import dht_pb2
+from hypermind.proto.auth_pb2 import AccessToken
+from hypermind.utils.auth import AuthRole, AuthRPCWrapper, TokenAuthorizerBase
+from hypermind.utils.crypto import RSAPrivateKey
+from hypermind.utils.logging import get_logger
 
 logger = get_logger(__name__)
 

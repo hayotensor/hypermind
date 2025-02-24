@@ -3,10 +3,10 @@ import os
 import pytest
 import torch
 
-from hivemind.dht import DHT
-from hivemind.moe.client.expert import create_remote_experts
-from hivemind.moe.expert_uid import ExpertInfo
-from hivemind.moe.server import background_server
+from hypermind.dht import DHT
+from hypermind.moe.client.expert import create_remote_experts
+from hypermind.moe.expert_uid import ExpertInfo
+from hypermind.moe.server import background_server
 
 CUSTOM_EXPERTS_PATH = os.path.join(os.path.dirname(__file__), "test_utils", "custom_networks.py")
 

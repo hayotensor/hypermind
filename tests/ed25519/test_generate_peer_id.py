@@ -1,10 +1,10 @@
-from hivemind.p2p.p2p_daemon import P2P
+from hypermind.p2p.p2p_daemon import P2P
 import pytest
 
 import os 
 import asyncio
 import tempfile
-from hivemind.utils.logging import get_logger
+from hypermind.utils.logging import get_logger
 
 logger = get_logger(__name__)
 

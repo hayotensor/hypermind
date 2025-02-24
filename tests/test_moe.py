@@ -8,16 +8,16 @@ import numpy as np
 import pytest
 import torch
 
-from hivemind.dht import DHT
-from hivemind.moe.client.expert import RemoteExpert, create_remote_experts
-from hivemind.moe.client.moe import DUMMY, RemoteMixtureOfExperts, _RemoteCallMany
-from hivemind.moe.client.remote_expert_worker import RemoteExpertWorker
-from hivemind.moe.client.switch_moe import RemoteSwitchMixtureOfExperts
-from hivemind.moe.expert_uid import ExpertInfo
-from hivemind.moe.server import ModuleBackend, Server, background_server, declare_experts
-from hivemind.moe.server.layers import name_to_block
-from hivemind.p2p.p2p_daemon_bindings.control import P2PHandlerError
-from hivemind.utils import BatchTensorDescriptor, MPFuture, get_dht_time
+from hypermind.dht import DHT
+from hypermind.moe.client.expert import RemoteExpert, create_remote_experts
+from hypermind.moe.client.moe import DUMMY, RemoteMixtureOfExperts, _RemoteCallMany
+from hypermind.moe.client.remote_expert_worker import RemoteExpertWorker
+from hypermind.moe.client.switch_moe import RemoteSwitchMixtureOfExperts
+from hypermind.moe.expert_uid import ExpertInfo
+from hypermind.moe.server import ModuleBackend, Server, background_server, declare_experts
+from hypermind.moe.server.layers import name_to_block
+from hypermind.p2p.p2p_daemon_bindings.control import P2PHandlerError
+from hypermind.utils import BatchTensorDescriptor, MPFuture, get_dht_time
 
 # ed25519
 

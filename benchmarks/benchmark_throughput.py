@@ -6,18 +6,18 @@ import time
 
 import torch
 
-from hivemind.dht import DHT
-from hivemind.moe.client.expert import RemoteExpert
-from hivemind.moe.client.remote_expert_worker import RemoteExpertWorker
-from hivemind.moe.expert_uid import ExpertInfo
-from hivemind.moe.server import ModuleBackend, Server
-from hivemind.moe.server.layers import name_to_block
-from hivemind.p2p import P2P
-from hivemind.utils.limits import increase_file_limit
-from hivemind.utils.logging import get_logger, use_hivemind_log_handler
-from hivemind.utils.tensor_descr import BatchTensorDescriptor
+from hypermind.dht import DHT
+from hypermind.moe.client.expert import RemoteExpert
+from hypermind.moe.client.remote_expert_worker import RemoteExpertWorker
+from hypermind.moe.expert_uid import ExpertInfo
+from hypermind.moe.server import ModuleBackend, Server
+from hypermind.moe.server.layers import name_to_block
+from hypermind.p2p import P2P
+from hypermind.utils.limits import increase_file_limit
+from hypermind.utils.logging import get_logger, use_hypermind_log_handler
+from hypermind.utils.tensor_descr import BatchTensorDescriptor
 
-use_hivemind_log_handler("in_root_logger")
+use_hypermind_log_handler("in_root_logger")
 logger = get_logger(__name__)
 
 

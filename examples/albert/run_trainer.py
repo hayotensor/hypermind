@@ -17,10 +17,10 @@ from transformers.optimization import get_linear_schedule_with_warmup
 from transformers.trainer import Trainer
 from transformers.trainer_utils import is_main_process
 
-from hivemind import DHT, Float16Compression, Optimizer, get_dht_time
-from hivemind.optim.state_averager import LRSchedulerBase
-from hivemind.utils.logging import get_logger, use_hivemind_log_handler
-from hivemind.utils.networking import log_visible_maddrs
+from hypermind import DHT, Float16Compression, Optimizer, get_dht_time
+from hypermind.optim.state_averager import LRSchedulerBase
+from hypermind.utils.logging import get_logger, use_hypermind_log_handler
+from hypermind.utils.networking import log_visible_maddrs
 
 import utils
 from arguments import (
@@ -31,7 +31,7 @@ from arguments import (
     ProgressTrackerArguments,
 )
 
-use_hivemind_log_handler("in_root_logger")
+use_hypermind_log_handler("in_root_logger")
 logger = get_logger(__name__)
 
 

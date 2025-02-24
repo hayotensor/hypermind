@@ -12,10 +12,10 @@ def test_dht_connection_successful():
 
     cloned_env = os.environ.copy()
     # overriding the loglevel to prevent debug print statements
-    cloned_env["HIVEMIND_LOGLEVEL"] = "INFO"
+    cloned_env["HYPERMIND_LOGLEVEL"] = "INFO"
 
     dht_proc = Popen(
-        ["hivemind-dht", "--host_maddrs", "/ip4/127.0.0.1/tcp/0", "--refresh_period", str(dht_refresh_period)],
+        ["hypermind-dht", "--host_maddrs", "/ip4/127.0.0.1/tcp/0", "--refresh_period", str(dht_refresh_period)],
         stderr=PIPE,
         text=True,
         encoding="utf-8",
@@ -32,7 +32,7 @@ def test_dht_connection_successful():
 
     dht_client_proc = Popen(
         [
-            "hivemind-dht",
+            "hypermind-dht",
             *initial_peers,
             "--host_maddrs",
             "/ip4/127.0.0.1/tcp/0",

@@ -3,8 +3,8 @@ import operator
 import random
 from itertools import chain, zip_longest
 
-from hivemind.dht.routing import DHTID, RoutingTable
-from hivemind.utils.networking import LOCALHOST
+from hypermind.dht.routing import DHTID, RoutingTable
+from hypermind.utils.networking import LOCALHOST
 
 # ed25519
 

@@ -12,9 +12,9 @@ from torch import nn as nn
 from torch.nn import functional as F
 from torch.utils.data import Dataset
 
-import hivemind
-from hivemind.optim.optimizer import Optimizer
-from hivemind.utils.crypto import RSAPrivateKey
+import hypermind
+from hypermind.optim.optimizer import Optimizer
+from hypermind.utils.crypto import RSAPrivateKey
 
 
 @dataclass(frozen=True)
@@ -60,7 +60,7 @@ def benchmark_optimizer(args: TrainingArguments):
     torch.manual_seed(args.seed)
     torch.set_num_threads(1)
 
-    dht = hivemind.DHT(start=True)
+    dht = hypermind.DHT(start=True)
 
     train_dataset = args.make_dataset()
     num_features = train_dataset.data[0].numel()
@@ -82,7 +82,7 @@ def benchmark_optimizer(args: TrainingArguments):
             params=model.parameters(),
             optimizer=partial(torch.optim.SGD, lr=args.lr_base),
             scheduler=partial(torch.optim.lr_scheduler.StepLR, gamma=args.lr_gamma, step_size=args.lr_step_size),
-            dht=hivemind.DHT(initial_peers=dht.get_visible_maddrs(), client_mode=client_mode, start=True),
+            dht=hypermind.DHT(initial_peers=dht.get_visible_maddrs(), client_mode=client_mode, start=True),
             tracker_opts=dict(private_key=RSAPrivateKey(), max_refresh_period=args.max_refresh_period),
             matchmaking_time=args.matchmaking_time,
             averaging_timeout=args.averaging_timeout,
@@ -95,9 +95,9 @@ def benchmark_optimizer(args: TrainingArguments):
         )
 
         if args.use_amp and args.reuse_grad_buffers:
-            grad_scaler = hivemind.GradScaler()
+            grad_scaler = hypermind.GradScaler()
         else:
-            # check that hivemind.Optimizer supports regular PyTorch grad scaler as well
+            # check that hypermind.Optimizer supports regular PyTorch grad scaler as well
             grad_scaler = torch.cuda.amp.GradScaler(enabled=args.use_amp)
 
         prev_time = time.perf_counter()

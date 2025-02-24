@@ -1,13 +1,13 @@
 import pytest
 
-from hivemind.p2p.multiaddr.exceptions import (
+from hypermind.p2p.multiaddr.exceptions import (
     BinaryParseError,
     ProtocolLookupError,
     ProtocolNotFoundError,
     StringParseError,
 )
-from hivemind.p2p.multiaddr.multiaddr import Multiaddr
-from hivemind.p2p.multiaddr.protocols import (
+from hypermind.p2p.multiaddr.multiaddr import Multiaddr
+from hypermind.p2p.multiaddr.protocols import (
     P_DNS,
     P_IP4,
     P_IP6,

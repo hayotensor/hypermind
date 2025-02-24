@@ -4,12 +4,12 @@ import gc
 import psutil
 import pytest
 
-# from hivemind.utils.crypto import RSAPrivateKey
-from hivemind.utils.crypto import Ed25519PrivateKey
-from hivemind.utils.logging import get_logger, use_hivemind_log_handler
-from hivemind.utils.mpfuture import MPFuture
+# from hypermind.utils.crypto import RSAPrivateKey
+from hypermind.utils.crypto import Ed25519PrivateKey
+from hypermind.utils.logging import get_logger, use_hypermind_log_handler
+from hypermind.utils.mpfuture import MPFuture
 
-use_hivemind_log_handler("in_root_logger")
+use_hypermind_log_handler("in_root_logger")
 logger = get_logger(__name__)
 
 

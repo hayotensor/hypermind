@@ -4,12 +4,12 @@ import pickle
 
 import pytest
 
-import hivemind
-from hivemind.dht.crypto import RSASignatureValidator
-from hivemind.dht.node import DHTNode
-from hivemind.dht.validation import DHTRecord
-from hivemind.utils.crypto import RSAPrivateKey
-from hivemind.utils.timed_storage import get_dht_time
+import hypermind
+from hypermind.dht.crypto import RSASignatureValidator
+from hypermind.dht.node import DHTNode
+from hypermind.dht.validation import DHTRecord
+from hypermind.utils.crypto import RSAPrivateKey
+from hypermind.utils.timed_storage import get_dht_time
 
 # ed25519  (use version in ed25519 directory)
 
@@ -120,18 +120,18 @@ async def test_dhtnode_signatures():
     key = b"key"
     subkey = b"protected_subkey" + bob.protocol.record_validator.local_public_key
 
-    assert await bob.store(key, b"true_value", hivemind.get_dht_time() + 10, subkey=subkey)
+    assert await bob.store(key, b"true_value", hypermind.get_dht_time() + 10, subkey=subkey)
     assert (await alice.get(key, latest=True)).value[subkey].value == b"true_value"
 
-    store_ok = await mallory.store(key, b"fake_value", hivemind.get_dht_time() + 10, subkey=subkey)
+    store_ok = await mallory.store(key, b"fake_value", hypermind.get_dht_time() + 10, subkey=subkey)
     assert not store_ok
     assert (await alice.get(key, latest=True)).value[subkey].value == b"true_value"
 
-    assert await bob.store(key, b"updated_true_value", hivemind.get_dht_time() + 10, subkey=subkey)
+    assert await bob.store(key, b"updated_true_value", hypermind.get_dht_time() + 10, subkey=subkey)
     assert (await alice.get(key, latest=True)).value[subkey].value == b"updated_true_value"
 
     await bob.shutdown()  # Bob has shut down, now Mallory is the single peer of Alice
 
-    store_ok = await mallory.store(key, b"updated_fake_value", hivemind.get_dht_time() + 10, subkey=subkey)
+    store_ok = await mallory.store(key, b"updated_fake_value", hypermind.get_dht_time() + 10, subkey=subkey)
     assert not store_ok
     assert (await alice.get(key, latest=True)).value[subkey].value == b"updated_true_value"

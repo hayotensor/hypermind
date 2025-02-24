@@ -21,7 +21,7 @@ from recommonmark.parser import CommonMarkParser
 from recommonmark.transform import AutoStructify
 
 # -- Project information -----------------------------------------------------
-src_path = "../hivemind"
+src_path = "../hypermind"
 project = "hivemind"
 copyright = "2020, Learning@home & contributors"
 author = "Learning@home & contributors"

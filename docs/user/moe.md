@@ -112,16 +112,16 @@ Now let's put these experts to work. Create a python console (or a jupyter) and 
 
 ```python
 import torch
-import hivemind
+import hypermind
 
-dht = hivemind.DHT(
+dht = hypermind.DHT(
     initial_peers=["/ip4/127.0.0.1/tcp/TODO/COPYFULL_ADDRESS/FROM_ONE_OF_THE_SERVERS"],
     client_mode=True, start=True)
 
 # note: client_mode=True means that your peer will operate in a "client-only" mode: 
 # this means that it can request other peers, but will not accept requests in return 
 
-expert1, expert4 = hivemind.moe.get_experts(dht, ["expert.1", "expert.4"])
+expert1, expert4 = hypermind.moe.get_experts(dht, ["expert.1", "expert.4"])
 assert expert1 is not None and expert4 is not None, "experts not found. Please double-check initial peers"
 ```
 
@@ -165,7 +165,7 @@ Finally, you can create a Mixture-of-Experts layer over these experts:
 ```python
 import nest_asyncio; nest_asyncio.apply()  # asyncio patch for jupyter. for now, we recommend using MoE from console
 
-dmoe = hivemind.RemoteMixtureOfExperts(in_features=512, uid_prefix="expert.", grid_size=(5,),
+dmoe = hypermind.RemoteMixtureOfExperts(in_features=512, uid_prefix="expert.", grid_size=(5,),
                                        dht=dht, k_best=2)
 
 out = dmoe(torch.randn(3, 512))
@@ -174,8 +174,8 @@ out.sum().backward()
 
 The `dmoe` layer dynamically selects the right experts using a linear gating function. It will then dispatch parallel
 forward (and backward) requests to those experts and collect results. You can find more details on how DMoE works in
-Section 2.3 of [(Ryabinin et al, 2020)](https://arxiv.org/abs/2002.04013). In addition to traditional MoE, hivemind
-implements `hivemind.RemoteSwitchMixtureOfExperts` using the simplified routing algorithm [(Fedus et al 2021)](https://arxiv.org/abs/2101.03961).
+Section 2.3 of [(Ryabinin et al, 2020)](https://arxiv.org/abs/2002.04013). In addition to traditional MoE, hypermind
+implements `hypermind.RemoteSwitchMixtureOfExperts` using the simplified routing algorithm [(Fedus et al 2021)](https://arxiv.org/abs/2101.03961).
 
 For more code examples related to DMoE, such as defining custom experts or using switch-based routing, please refer to
-[`hivemind/tests/test_training.py`](https://github.com/learning-at-home/hivemind/blob/master/tests/test_training.py).
+[`hypermind/tests/test_training.py`](https://github.com/learning-at-home/hivemind/blob/master/tests/test_training.py).

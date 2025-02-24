@@ -7,18 +7,18 @@ from typing import Optional
 import multihash
 import pytest
 
-from hivemind.proto import dht_pb2
-from hivemind.proto.auth_pb2 import AccessToken
-from hivemind.dht.routing import DHTID
-from hivemind.p2p.p2p_daemon import P2P
-from hivemind.p2p.p2p_daemon_bindings.datastructures import PeerID
-from hivemind.utils.auth import AuthRole, AuthRPCWrapper, AuthorizedRequestBase, AuthorizedResponseBase, AuthorizerBase, POSAuthorizerLive, TokenAuthorizerBase
-from hivemind.utils.crypto import Ed25519PrivateKey, Ed25519PublicKey
-from hivemind.utils.logging import get_logger
+from hypermind.proto import dht_pb2
+from hypermind.proto.auth_pb2 import AccessToken
+from hypermind.dht.routing import DHTID
+from hypermind.p2p.p2p_daemon import P2P
+from hypermind.p2p.p2p_daemon_bindings.datastructures import PeerID
+from hypermind.utils.auth import AuthRole, AuthRPCWrapper, AuthorizedRequestBase, AuthorizedResponseBase, AuthorizerBase, POSAuthorizerLive, TokenAuthorizerBase
+from hypermind.utils.crypto import Ed25519PrivateKey, Ed25519PublicKey
+from hypermind.utils.logging import get_logger
 from cryptography.hazmat.primitives import serialization
-from hivemind.proto import crypto_pb2
+from hypermind.proto import crypto_pb2
 from cryptography.hazmat.primitives.asymmetric import ed25519
-from hivemind.utils.timed_storage import get_dht_time
+from hypermind.utils.timed_storage import get_dht_time
 from substrateinterface import SubstrateInterface
 
 from test_dht_protocol_pos_auth import RPC_URL, run_register_subnet_node

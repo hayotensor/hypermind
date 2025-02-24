@@ -7,17 +7,17 @@ from typing import List, Sequence, Tuple
 import pytest
 from multiaddr import Multiaddr
 
-import hivemind
-from hivemind import P2P, PeerID, get_dht_time, get_logger
-from hivemind.dht import DHTID
-from hivemind.dht.protocol import DHTProtocol
-from hivemind.dht.storage import DictionaryDHTValue
+import hypermind
+from hypermind import P2P, PeerID, get_dht_time, get_logger
+from hypermind.dht import DHTID
+from hypermind.dht.protocol import DHTProtocol
+from hypermind.dht.storage import DictionaryDHTValue
 from cryptography.hazmat.primitives import serialization
 
-from hivemind.utils.auth import POSAuthorizer
-from hivemind.utils.crypto import Ed25519PrivateKey, Ed25519PublicKey
+from hypermind.utils.auth import POSAuthorizer
+from hypermind.utils.crypto import Ed25519PrivateKey, Ed25519PublicKey
 from cryptography.hazmat.primitives.asymmetric import ed25519
-from hivemind.proto import crypto_pb2, p2pd_pb2
+from hypermind.proto import crypto_pb2, p2pd_pb2
 
 logger = get_logger(__name__)
 
@@ -121,12 +121,12 @@ async def test_dht_protocol():
         assert peer1_node_id == await protocol.call_ping(peer1_id)
 
         key, value, expiration = DHTID.generate(), [random.random(), {"ololo": "pyshpysh"}], get_dht_time() + 1e3
-        store_ok = await protocol.call_store(peer1_id, [key], [hivemind.MSGPackSerializer.dumps(value)], expiration)
+        store_ok = await protocol.call_store(peer1_id, [key], [hypermind.MSGPackSerializer.dumps(value)], expiration)
         assert all(store_ok), "DHT rejected a trivial store"
 
         # peer 1 must know about peer 2
         (recv_value_bytes, recv_expiration), nodes_found = (await protocol.call_find(peer1_id, [key]))[key]
-        recv_value = hivemind.MSGPackSerializer.loads(recv_value_bytes)
+        recv_value = hypermind.MSGPackSerializer.loads(recv_value_bytes)
         (recv_id, recv_peer_id) = next(iter(nodes_found.items()))
         assert (
             recv_id == peer2_node_id and recv_peer_id == peer2_id
@@ -155,14 +155,14 @@ async def test_dht_protocol():
         assert await protocol.call_store(
             peer1_id,
             keys=[nested_key],
-            values=[hivemind.MSGPackSerializer.dumps(value1)],
+            values=[hypermind.MSGPackSerializer.dumps(value1)],
             expiration_time=[expiration],
             subkeys=[subkey1],
         )
         assert await protocol.call_store(
             peer1_id,
             keys=[nested_key],
-            values=[hivemind.MSGPackSerializer.dumps(value2)],
+            values=[hypermind.MSGPackSerializer.dumps(value2)],
             expiration_time=[expiration + 5],
             subkeys=[subkey2],
         )
@@ -272,10 +272,10 @@ async def test_empty_table():
 
     empty_item, nodes_found = (await protocol.call_find(peer_peer_id, [key]))[key]
     assert empty_item is None and len(nodes_found) == 0
-    assert all(await protocol.call_store(peer_peer_id, [key], [hivemind.MSGPackSerializer.dumps(value)], expiration))
+    assert all(await protocol.call_store(peer_peer_id, [key], [hypermind.MSGPackSerializer.dumps(value)], expiration))
 
     (recv_value_bytes, recv_expiration), nodes_found = (await protocol.call_find(peer_peer_id, [key]))[key]
-    recv_value = hivemind.MSGPackSerializer.loads(recv_value_bytes)
+    recv_value = hypermind.MSGPackSerializer.loads(recv_value_bytes)
     assert len(nodes_found) == 0
     assert recv_value == value and recv_expiration == expiration
 

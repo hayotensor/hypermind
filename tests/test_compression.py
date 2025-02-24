@@ -5,8 +5,8 @@ import pytest
 import torch
 import torch.nn as nn
 
-import hivemind
-from hivemind.compression import (
+import hypermind
+from hypermind.compression import (
     CompressionBase,
     CompressionInfo,
     Float16Compression,
@@ -18,13 +18,13 @@ from hivemind.compression import (
     deserialize_torch_tensor,
     serialize_torch_tensor,
 )
-from hivemind.compression.adaptive import AdaptiveCompressionBase
-from hivemind.proto.runtime_pb2 import CompressionType
-from hivemind.utils.streaming import combine_from_streaming, split_for_streaming
+from hypermind.compression.adaptive import AdaptiveCompressionBase
+from hypermind.proto.runtime_pb2 import CompressionType
+from hypermind.utils.streaming import combine_from_streaming, split_for_streaming
 
 from test_utils.dht_swarms import launch_dht_instances
 
-# ed25519 (doesn't work, doesn't work in hivemind with no changes also)
+# ed25519 (doesn't work, doesn't work in hypermind with no changes also)
 
 @pytest.mark.forked
 def test_tensor_compression(size=(128, 128, 64), alpha=5e-08, beta=0.0008):
@@ -108,7 +108,7 @@ def test_serialize_tensor_properties(dtype: torch.dtype, requires_grad: bool):
 @pytest.mark.parametrize("tensor_size", [(4096, 16), (0, 0)])
 @pytest.mark.forked
 def test_serialize_bfloat16(use_legacy_bfloat16: bool, tensor_size: tuple):
-    hivemind.compression.base.USE_LEGACY_BFLOAT16 = use_legacy_bfloat16
+    hypermind.compression.base.USE_LEGACY_BFLOAT16 = use_legacy_bfloat16
     tensor = torch.randn(tensor_size, dtype=torch.bfloat16)
     _check(tensor, CompressionType.NONE)
     _check(tensor, CompressionType.BLOCKWISE_8BIT, rtol=0.1, atol=0.01, chunk_size=1024)
@@ -126,7 +126,7 @@ def test_allreduce_compression():
 
     for compression_type_pair in [(FLOAT16, FLOAT16), (FLOAT16, UINT8), (UINT8, FLOAT16), (UINT8, UINT8)]:
         dht_instances = launch_dht_instances(2)
-        averager1 = hivemind.averaging.DecentralizedAverager(
+        averager1 = hypermind.averaging.DecentralizedAverager(
             [x.clone() for x in tensors1],
             dht=dht_instances[0],
             compression=PerTensorCompression(compression_type_pair),
@@ -135,7 +135,7 @@ def test_allreduce_compression():
             prefix="mygroup",
             start=True,
         )
-        averager2 = hivemind.averaging.DecentralizedAverager(
+        averager2 = hypermind.averaging.DecentralizedAverager(
             [x.clone() for x in tensors2],
             dht=dht_instances[1],
             compression=PerTensorCompression(compression_type_pair),
@@ -220,7 +220,7 @@ def test_adaptive_compression():
         greater_equal=STATE_FP16,
     )
 
-    averager1 = hivemind.TrainingAverager(
+    averager1 = hypermind.TrainingAverager(
         opt=torch.optim.Adam(make_params()),
         average_parameters=True,
         average_gradients=True,
@@ -231,10 +231,10 @@ def test_adaptive_compression():
         target_group_size=2,
         part_size_bytes=5_000,
         start=True,
-        dht=hivemind.DHT(start=True),
+        dht=hypermind.DHT(start=True),
     )
 
-    averager2 = hivemind.TrainingAverager(
+    averager2 = hypermind.TrainingAverager(
         opt=torch.optim.Adam(make_params()),
         average_parameters=True,
         average_gradients=True,
@@ -245,7 +245,7 @@ def test_adaptive_compression():
         target_group_size=2,
         part_size_bytes=5_000,
         start=True,
-        dht=hivemind.DHT(initial_peers=averager1.dht.get_visible_maddrs(), start=True),
+        dht=hypermind.DHT(initial_peers=averager1.dht.get_visible_maddrs(), start=True),
     )
 
     futures = [averager1.step(wait=False), averager2.step(wait=False)]

@@ -3,9 +3,9 @@ from typing import AsyncIterator
 
 import pytest
 
-from hivemind.p2p import P2P, P2PContext, P2PDaemonError, ServicerBase
-from hivemind.proto import test_pb2
-from hivemind.utils.asyncio import anext
+from hypermind.p2p import P2P, P2PContext, P2PDaemonError, ServicerBase
+from hypermind.proto import test_pb2
+from hypermind.utils.asyncio import anext
 
 # ed25519
 

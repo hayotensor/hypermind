@@ -4,12 +4,12 @@ import pickle
 
 import pytest
 
-import hivemind
-from hivemind.dht.crypto import Ed25519SignatureValidator
-from hivemind.dht.node import DHTNode
-from hivemind.dht.validation import DHTRecord
-from hivemind.utils.crypto import Ed25519PrivateKey
-from hivemind.utils.timed_storage import get_dht_time
+import hypermind
+from hypermind.dht.crypto import Ed25519SignatureValidator
+from hypermind.dht.node import DHTNode
+from hypermind.dht.validation import DHTRecord
+from hypermind.utils.crypto import Ed25519PrivateKey
+from hypermind.utils.timed_storage import get_dht_time
 
 # pytest tests/ed25519/test_dht_crypto.py -rP
 
@@ -127,10 +127,10 @@ async def test_dhtnode_signatures():
     key = b"key"
     subkey = b"protected_subkey" + bob.protocol.record_validator.local_public_key
 
-    assert await bob.store(key, b"true_value", hivemind.get_dht_time() + 10, subkey=subkey)
+    assert await bob.store(key, b"true_value", hypermind.get_dht_time() + 10, subkey=subkey)
     assert (await alice.get(key, latest=True)).value[subkey].value == b"true_value"
 
-    store_ok = await mallory.store(key, b"fake_value", hivemind.get_dht_time() + 10, subkey=subkey)
+    store_ok = await mallory.store(key, b"fake_value", hypermind.get_dht_time() + 10, subkey=subkey)
     assert not store_ok
     assert (await alice.get(key, latest=True)).value[subkey].value == b"true_value"
 
@@ -141,18 +141,18 @@ async def test_dhtnode_signatures():
     print("response get_manyherE", response)
     print("response get_manyherE", response.value[subkey].value)
 
-    assert await bob.store(key, b"updated_true_value", hivemind.get_dht_time() + 10, subkey=subkey)
+    assert await bob.store(key, b"updated_true_value", hypermind.get_dht_time() + 10, subkey=subkey)
     assert (await alice.get(key, latest=True)).value[subkey].value == b"updated_true_value"
 
     alice_subkey = b"protected_subkey" + alice.protocol.record_validator.local_public_key
-    assert await alice.store(key, b"alice_true_value", hivemind.get_dht_time() + 10, subkey=alice_subkey)
+    assert await alice.store(key, b"alice_true_value", hypermind.get_dht_time() + 10, subkey=alice_subkey)
     assert (await bob.get(key, latest=True)).value[alice_subkey].value == b"alice_true_value"
 
     assert await bob.get(key, latest=True) != None
 
     await bob.shutdown()  # Bob has shut down, now Mallory is the single peer of Alice
 
-    store_ok = await mallory.store(key, b"updated_fake_value", hivemind.get_dht_time() + 10, subkey=subkey)
+    store_ok = await mallory.store(key, b"updated_fake_value", hypermind.get_dht_time() + 10, subkey=subkey)
     assert not store_ok
     assert (await alice.get(key, latest=True)).value[subkey].value == b"updated_true_value"
 
@@ -171,7 +171,7 @@ async def test_dhtnode_signatures_key():
     key = b"key"
     subkey = b"protected_subkey" + bob.protocol.record_validator.local_public_key
 
-    assert await bob.store(key, b"true_value", hivemind.get_dht_time() + 10, subkey=subkey)
+    assert await bob.store(key, b"true_value", hypermind.get_dht_time() + 10, subkey=subkey)
     assert (await alice.get(key, latest=True)).value[subkey].value == b"true_value"
 
     response = await alice.get_many([key])
@@ -179,7 +179,7 @@ async def test_dhtnode_signatures_key():
 
     alice_subkey = b"protected_subkey" + alice.protocol.record_validator.local_public_key
 
-    assert await alice.store(key, b"alice_true_value", hivemind.get_dht_time() + 10, subkey=alice_subkey)
+    assert await alice.store(key, b"alice_true_value", hypermind.get_dht_time() + 10, subkey=alice_subkey)
     assert (await bob.get(key, latest=True)).value[alice_subkey].value == b"alice_true_value"
 
     response = await alice.get_many([key])
@@ -187,7 +187,7 @@ async def test_dhtnode_signatures_key():
 
     print("rps_get[key].value", response[key].value)
 
-    # store_ok = await mallory.store(key, b"fake_value", hivemind.get_dht_time() + 10, subkey=subkey)
+    # store_ok = await mallory.store(key, b"fake_value", hypermind.get_dht_time() + 10, subkey=subkey)
     # assert not store_ok
     # assert (await alice.get(key, latest=True)).value[subkey].value == b"true_value"
 
@@ -198,17 +198,17 @@ async def test_dhtnode_signatures_key():
     # print("response get_manyherE", response)
     # print("response get_manyherE", response.value[subkey].value)
 
-    # assert await bob.store(key, b"updated_true_value", hivemind.get_dht_time() + 10, subkey=subkey)
+    # assert await bob.store(key, b"updated_true_value", hypermind.get_dht_time() + 10, subkey=subkey)
     # assert (await alice.get(key, latest=True)).value[subkey].value == b"updated_true_value"
 
     # alice_subkey = b"protected_subkey" + alice.protocol.record_validator.local_public_key
-    # assert await alice.store(key, b"alice_true_value", hivemind.get_dht_time() + 10, subkey=alice_subkey)
+    # assert await alice.store(key, b"alice_true_value", hypermind.get_dht_time() + 10, subkey=alice_subkey)
     # assert (await bob.get(key, latest=True)).value[alice_subkey].value == b"alice_true_value"
 
     # assert await bob.get(key, latest=True) != None
 
     # await bob.shutdown()  # Bob has shut down, now Mallory is the single peer of Alice
 
-    # store_ok = await mallory.store(key, b"updated_fake_value", hivemind.get_dht_time() + 10, subkey=subkey)
+    # store_ok = await mallory.store(key, b"updated_fake_value", hypermind.get_dht_time() + 10, subkey=subkey)
     # assert not store_ok
     # assert (await alice.get(key, latest=True)).value[subkey].value == b"updated_true_value"

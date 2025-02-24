@@ -1,8 +1,8 @@
 import time
 
-from hivemind.dht.storage import DHTID, DHTLocalStorage, DictionaryDHTValue
-from hivemind.utils.serializer import MSGPackSerializer
-from hivemind.utils.timed_storage import get_dht_time
+from hypermind.dht.storage import DHTID, DHTLocalStorage, DictionaryDHTValue
+from hypermind.utils.serializer import MSGPackSerializer
+from hypermind.utils.timed_storage import get_dht_time
 
 # ed25519
 

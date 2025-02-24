@@ -94,3 +94,9 @@ hivemind/proto/*_pb2*
 
 # libp2p-daemon binary
 hivemind/hivemind_cli/p2pd
+
+# protobuf stuff
+hypermind/proto/*_pb2*
+
+# libp2p-daemon binary
+hypermind/hypermind_cli/p2pd

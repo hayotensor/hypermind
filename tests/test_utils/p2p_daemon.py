@@ -9,13 +9,13 @@ from typing import NamedTuple
 
 from pkg_resources import resource_filename
 
-from hivemind.p2p.multiaddr import Multiaddr, protocols
-from hivemind.p2p.p2p_daemon_bindings.p2pclient import Client
+from hypermind.p2p.multiaddr import Multiaddr, protocols
+from hypermind.p2p.p2p_daemon_bindings.p2pclient import Client
 
 from test_utils.networking import get_free_port
 
 TIMEOUT_DURATION = 30  # seconds
-P2PD_PATH = resource_filename("hivemind", "hivemind_cli/p2pd")
+P2PD_PATH = resource_filename("hypermind", "hypermind_cli/p2pd")
 
 
 async def try_until_success(coro_func, timeout=TIMEOUT_DURATION):

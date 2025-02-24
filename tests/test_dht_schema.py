@@ -4,11 +4,11 @@ from typing import Dict
 import pytest
 from pydantic.v1 import BaseModel, StrictInt, conint
 
-import hivemind
-from hivemind.dht.node import DHTNode
-from hivemind.dht.schema import BytesWithPublicKey, SchemaValidator
-from hivemind.dht.validation import DHTRecord, RecordValidatorBase
-from hivemind.utils.timed_storage import get_dht_time
+import hypermind
+from hypermind.dht.node import DHTNode
+from hypermind.dht.schema import BytesWithPublicKey, SchemaValidator
+from hypermind.dht.validation import DHTRecord, RecordValidatorBase
+from hypermind.utils.timed_storage import get_dht_time
 
 # ed25519
 
@@ -83,7 +83,7 @@ async def test_expecting_public_keys(dht_nodes_with_schema):
     alice, bob = dht_nodes_with_schema
 
     # Subkeys expected to contain a public key
-    # (so hivemind.dht.crypto.RSASignatureValidator would require a signature)
+    # (so hypermind.dht.crypto.RSASignatureValidator would require a signature)
     assert await bob.store("signed_data", b"foo_bar", get_dht_time() + 10, subkey=b"uid[owner:public-key]")
     assert not await bob.store("signed_data", b"foo_bar", get_dht_time() + 10, subkey=b"uid-without-public-key")
 
@@ -185,8 +185,8 @@ async def test_merging_schema_validators(dht_nodes_with_schema):
 
 @pytest.mark.forked
 def test_sending_validator_instance_between_processes():
-    alice = hivemind.DHT(start=True)
-    bob = hivemind.DHT(start=True, initial_peers=alice.get_visible_maddrs())
+    alice = hypermind.DHT(start=True)
+    bob = hypermind.DHT(start=True, initial_peers=alice.get_visible_maddrs())
 
     alice.add_validators([SchemaValidator(SampleSchema)])
     bob.add_validators([SchemaValidator(SampleSchema)])

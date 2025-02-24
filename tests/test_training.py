@@ -6,11 +6,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 from sklearn.datasets import load_digits
 
-from hivemind import DHT
-from hivemind.moe.client import RemoteMixtureOfExperts, RemoteSwitchMixtureOfExperts
-from hivemind.moe.client.expert import create_remote_experts
-from hivemind.moe.expert_uid import ExpertInfo
-from hivemind.moe.server import background_server
+from hypermind import DHT
+from hypermind.moe.client import RemoteMixtureOfExperts, RemoteSwitchMixtureOfExperts
+from hypermind.moe.client.expert import create_remote_experts
+from hypermind.moe.expert_uid import ExpertInfo
+from hypermind.moe.server import background_server
 
 # ed25519
 
