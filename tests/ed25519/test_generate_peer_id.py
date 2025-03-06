@@ -11,7 +11,7 @@ logger = get_logger(__name__)
 # pytest tests/ed25519/test_generate_peer_id.py -rP
 
 @pytest.mark.asyncio
-async def test_identity():
+async def test_identity(): 
     with tempfile.TemporaryDirectory() as tempdir:
         id1_path = os.path.join(tempdir, "id1")
         id2_path = os.path.join(tempdir, "id2")
