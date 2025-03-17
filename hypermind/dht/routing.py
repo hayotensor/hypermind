@@ -10,7 +10,9 @@ from itertools import chain
 from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, Union
 
 from hypermind.p2p import PeerID
-from hypermind.utils import MSGPackSerializer, get_dht_time
+from hypermind.utils import MSGPackSerializer, get_dht_time, get_logger
+
+logger = get_logger(__name__)
 
 DHTKey = Subkey = DHTValue = Any
 BinaryDHTValue = bytes
@@ -54,6 +56,8 @@ class RoutingTable:
           If this method returned a node to be ping-ed, the protocol will ping it to check and either move it to
           the start of the table or remove that node and replace it with
         """
+        logger.debug(f"Adding node to routing table, DHTID: {node_id}, PeerID: {peer_id.to_base58()}")
+
         bucket_index = self.get_bucket_index(node_id)
         bucket = self.buckets[bucket_index]
         store_success = bucket.add_or_update_node(node_id, peer_id)
@@ -102,6 +106,7 @@ class RoutingTable:
     def __delitem__(self, node_id: DHTID):
         del self.buckets[self.get_bucket_index(node_id)][node_id]
         node_peer_id = self.uid_to_peer_id.pop(node_id)
+        logger.debug(f"Deleting node from routing table, DHTID: {node_id}, PeerID: {node_peer_id}")
         if self.peer_id_to_uid.get(node_peer_id) == node_id:
             del self.peer_id_to_uid[node_peer_id]
 

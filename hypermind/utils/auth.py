@@ -443,6 +443,7 @@ class POSAuthorizerLive(AuthorizerBase):
             return True
 
         peer_id_vec = self.to_vec_u8(peer_id.to_base58())
+        
         # Check Hypertensor
         proof_of_stake = self.is_staked(peer_id_vec)
 
