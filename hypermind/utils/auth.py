@@ -417,6 +417,7 @@ class POSAuthorizerLive(AuthorizerBase):
 
     def add_or_update_peer_id(self, peer_id: PeerID):
         timestamp = get_dht_time()
+        logger.debug(f"PoS for {peer_id}, adding to dict at timestamp {timestamp}")
         self.peer_id_to_last_update[peer_id] = timestamp
 
     def delete_peer_id(self, peer_id: PeerID):
@@ -448,6 +449,7 @@ class POSAuthorizerLive(AuthorizerBase):
         proof_of_stake = self.is_staked(peer_id_vec)
 
         if proof_of_stake is False:
+            logger.debug(f"PoS fail for {peer_id}, removing from dict")
             # If not staked, remove from mappings and return False
             self.delete_peer_id(peer_id)
             self.peer_id_to_failed_pos_last_update[peer_id] = timestamp

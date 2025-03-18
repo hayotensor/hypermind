@@ -163,7 +163,9 @@ class DHTProtocol(ServicerBase):
     async def rpc_ping(self, request: dht_pb2.PingRequest, context: P2PContext) -> dht_pb2.PingResponse:
         """Some node wants us to add it to our routing table."""
 
-        logger.debug(f"DHTProtocol rpc_ping, Node wants us to add it to our routing table, request={request}, context={context}")
+        logger.debug(
+            f"DHTProtocol rpc_ping, Node wants us to add it to our routing table, request={request}, context={context}"
+        )
 
         response = dht_pb2.PingResponse(peer=self.node_info, dht_time=get_dht_time(), available=False)
 
@@ -267,6 +269,7 @@ class DHTProtocol(ServicerBase):
     async def rpc_store(self, request: dht_pb2.StoreRequest, context: P2PContext) -> dht_pb2.StoreResponse:
         """Some node wants us to store this (key, value) pair"""
         logger.debug(f"DHTProtocol rpc_store, Node wants us to store (key, value) pair, request={request} ,context={context}")
+        
         if request.peer:  # if requested, add peer to the routing table
             asyncio.create_task(self.rpc_ping(dht_pb2.PingRequest(peer=request.peer), context))
         assert len(request.keys) == len(request.values) == len(request.expiration_time) == len(request.in_cache)
