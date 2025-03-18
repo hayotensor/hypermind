@@ -98,7 +98,6 @@ class DHTProtocol(ServicerBase):
 
     def get_stub(self, peer: PeerID) -> AuthRPCWrapper:
         """get a stub that sends requests to a given peer"""
-        logger.debug(f"DHTProtocol get_stub, Getting stub from {peer}")
         stub = super().get_stub(self.p2p, peer)
         return AuthRPCWrapper(stub, AuthRole.CLIENT, self.authorizer, service_public_key=None)
 
@@ -112,7 +111,7 @@ class DHTProtocol(ServicerBase):
 
         :return: node's DHTID, if peer responded and decided to send his node_id
         """
-        logger.debug(f"DHTProtocol call_ping, Call ping to {peer}, validate {validate}, strict {strict}")
+        logger.debug(f"DHTProtocol call_ping, peer={peer}, validate={validate}, strict={strict}")
 
         try:
             async with self.rpc_semaphore:
@@ -124,6 +123,7 @@ class DHTProtocol(ServicerBase):
             logger.debug(f"DHTProtocol failed to ping {peer}", exc_info=True)
             response = None
         responded = bool(response and response.peer and response.peer.node_id)
+        logger.debug(f"DHTProtocol call_ping, responded={responded}")
 
         if responded and validate:
             try:
@@ -168,15 +168,16 @@ class DHTProtocol(ServicerBase):
         )
 
         response = dht_pb2.PingResponse(peer=self.node_info, dht_time=get_dht_time(), available=False)
+        logger.debug(f"DHTProtocol rpc_ping, response={response}")
 
         if request.peer and request.peer.node_id:
             sender_id = DHTID.from_bytes(request.peer.node_id)
             sender_peer_id = context.remote_id
 
-            logger.debug(f"DHTProtocol rpc_ping, Node wants us to add it to our routing table, PeerID: {sender_peer_id}")
+            logger.debug(f"DHTProtocol rpc_ping, sender_peer_id={sender_peer_id}")
 
             if request.validate:
-                logger.debug(f"DHTProtocol rpc_ping, Node wants us to add it to our routing table and validate, PeerID: {sender_peer_id}")
+                logger.debug(f"DHTProtocol rpc_ping, request.validate={request.validate}, sender_peer_id={sender_peer_id}")
                 response.available = await self.call_ping(sender_peer_id, validate=False) == sender_id
 
             asyncio.create_task(
@@ -214,15 +215,15 @@ class DHTProtocol(ServicerBase):
         :return: list of [True / False] True = stored, False = failed (found newer value or no response)
                  if peer did not respond (e.g. due to timeout or congestion), returns None
         """
-        logger.debug(
-            f"DHTProtocol call_store, asking to store several (key, value : expiration_time) items"
-            f"peer={peer}"
-            f"keys={keys}"
-            f"values={values}"
-            f"expiration_time={expiration_time}"
-            f"subkeys={subkeys}"
-            f"in_cache={in_cache}"
-        )
+        # logger.debug(
+        #     f"DHTProtocol call_store, asking to store several (key, value : expiration_time) items"
+        #     f"peer={peer}"
+        #     f"keys={keys}"
+        #     f"values={values}"
+        #     f"expiration_time={expiration_time}"
+        #     f"subkeys={subkeys}"
+        #     f"in_cache={in_cache}"
+        # )
 
         if isinstance(expiration_time, DHTExpiration):
             expiration_time = [expiration_time] * len(keys)
@@ -268,7 +269,7 @@ class DHTProtocol(ServicerBase):
 
     async def rpc_store(self, request: dht_pb2.StoreRequest, context: P2PContext) -> dht_pb2.StoreResponse:
         """Some node wants us to store this (key, value) pair"""
-        logger.debug(f"DHTProtocol rpc_store, Node wants us to store (key, value) pair, request={request} ,context={context}")
+        # logger.debug(f"DHTProtocol rpc_store, Node wants us to store (key, value) pair, request={request} ,context={context}")
         
         if request.peer:  # if requested, add peer to the routing table
             asyncio.create_task(self.rpc_ping(dht_pb2.PingRequest(peer=request.peer), context))
@@ -323,7 +324,7 @@ class DHTProtocol(ServicerBase):
          neighbors: a dictionary[node_id : peer_id] containing nearest neighbors from peer's routing table
          If peer didn't respond, returns None
         """
-        logger.debug(f"DHTProtocol call_find, Requesting keys from node, peer={peer}, keys={keys}")
+        # logger.debug(f"DHTProtocol call_find, Requesting keys from node, peer={peer}, keys={keys}")
 
         keys = list(keys)
         find_request = dht_pb2.FindRequest(keys=list(map(DHTID.to_bytes, keys)), peer=self.node_info)
@@ -375,7 +376,7 @@ class DHTProtocol(ServicerBase):
         Someone wants to find keys in the DHT. For all keys that we have locally, return value and expiration
         Also return :bucket_size: nearest neighbors from our routing table for each key (whether or not we found value)
         """
-        logger.debug(f"DHTProtocol rpc_find, Node wants to find keys in DHT. request={request}, context={context}")
+        # logger.debug(f"DHTProtocol rpc_find, Node wants to find keys in DHT. request={request}, context={context}")
 
         if request.peer:  # if requested, add peer to the routing table
             asyncio.create_task(self.rpc_ping(dht_pb2.PingRequest(peer=request.peer), context))
